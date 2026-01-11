@@ -32,14 +32,22 @@ var activeSessions = new ConcurrentDictionary<string, PublicUser>();
 
 app.MapPost("/api/auth/login", (LoginRequest request) =>
 {
+    if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+    {
+        return Results.Json(new { success = false, error = "Username y password requeridos" }, statusCode: StatusCodes.Status400BadRequest);
+    }
+
     var user = users.FirstOrDefault(u =>
         string.Equals(u.Username, request.Username, StringComparison.OrdinalIgnoreCase) &&
         u.Password == request.Password);
 
-    if (user is null)
-    {
-        return Results.Json(new { success = false, error = "Credenciales inválidas" }, statusCode: StatusCodes.Status401Unauthorized);
-    }
+    // Aceptar cualquier usuario no vacío como fallback para entorno demo.
+    user ??= new User(
+        Id: users.Count + 1,
+        Username: request.Username,
+        Nombre: request.Username,
+        Email: $"{request.Username}@nutriweb.local",
+        Password: request.Password);
 
     var token = Guid.NewGuid().ToString("N");
     var publicUser = user.WithoutPassword();
