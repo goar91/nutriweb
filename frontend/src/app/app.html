@@ -1,0 +1,392 @@
+<div class="page-shell">
+  <header class="hero">
+    <p class="eyebrow">NutriWeb · Historia clínica nutricional</p>
+    <h1>{{ pageTitle() }}</h1>
+    <p>
+      Registra los datos clínicos, hábitos y frecuencias alimentarias del paciente
+      para que el equipo nutricional pueda preparar un plan personalizado.
+    </p>
+  </header>
+
+  <form class="history-form" [formGroup]="nutriForm" (ngSubmit)="submitHistory()">
+    <section class="card">
+      <h2>Datos personales</h2>
+      <div formGroupName="personalData" class="grid grid-3">
+        <label>
+          Nombre
+          <input formControlName="nombre" type="text" placeholder="Nombre completo" />
+        </label>
+        <label>
+          Edad cronológica
+          <input formControlName="edadCronologica" type="text" placeholder="Años" />
+        </label>
+        <label>
+          Sexo
+          <input formControlName="sexo" type="text" placeholder="F / M / O" />
+        </label>
+        <label>
+          Lugar de residencia
+          <input formControlName="lugarResidencia" type="text" />
+        </label>
+        <label>
+          Estado civil
+          <input formControlName="estadoCivil" type="text" />
+        </label>
+        <label>
+          Número de cédula
+          <input formControlName="numeroCedula" type="text" />
+        </label>
+        <label>
+          Teléfono
+          <input formControlName="telefono" type="tel" />
+        </label>
+        <label>
+          Ocupación
+          <input formControlName="ocupacion" type="text" />
+        </label>
+        <label>
+          Email
+          <input formControlName="email" type="email" />
+        </label>
+        <label>
+          Fecha de consulta
+          <input formControlName="fechaConsulta" type="date" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Motivo de consulta</h2>
+      <label class="full">
+        <textarea
+          formControlName="motivoConsulta"
+          rows="3"
+          placeholder="Describe brevemente el motivo de la consulta"
+        ></textarea>
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>Antecedentes</h2>
+      <div formGroupName="antecedentes" class="grid grid-3">
+        <label>
+          APF
+          <input formControlName="apf" type="text" />
+        </label>
+        <label>
+          APP
+          <input formControlName="app" type="text" />
+        </label>
+        <label>
+          APQ
+          <input formControlName="apq" type="text" />
+        </label>
+        <label>
+          AGO
+          <input formControlName="ago" type="text" />
+        </label>
+        <label>
+          Menarquía
+          <input formControlName="menarquia" type="text" />
+        </label>
+        <label>
+          P · G · C · A
+          <input formControlName="p" placeholder="P" />
+          <input formControlName="g" placeholder="G" />
+          <input formControlName="c" placeholder="C" />
+          <input formControlName="a" placeholder="A" />
+        </label>
+        <label>
+          Alergias
+          <input formControlName="alergias" type="text" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Diagnóstico nutricional clínico</h2>
+      <label class="full">
+        <textarea formControlName="diagnostico" rows="3"></textarea>
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>Hábitos del paciente</h2>
+      <div formGroupName="habitos" class="grid grid-3">
+        <label>
+          Fuma
+          <input formControlName="fuma" type="text" />
+        </label>
+        <label>
+          Alcohol
+          <input formControlName="alcohol" type="text" />
+        </label>
+        <label>
+          Café
+          <input formControlName="cafe" type="text" />
+        </label>
+        <label>
+          Hidratación
+          <input formControlName="hidratacion" type="text" />
+        </label>
+        <label>
+          Gaseosas
+          <input formControlName="gaseosas" type="text" />
+        </label>
+        <label>
+          Actividad física
+          <input formControlName="actividadFisica" type="text" />
+        </label>
+        <label>
+          Té
+          <input formControlName="te" type="text" />
+        </label>
+        <label>
+          Uso de edulcorantes
+          <input formControlName="edulcorantes" type="text" />
+        </label>
+        <label>
+          Alimentación
+          <input formControlName="alimentacion" type="text" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Signos vitales</h2>
+      <div formGroupName="signos" class="grid grid-4">
+        <label>
+          PA
+          <input formControlName="pa" type="text" />
+        </label>
+        <label>
+          Temperatura
+          <input formControlName="temperatura" type="text" />
+        </label>
+        <label>
+          FC
+          <input formControlName="fc" type="text" />
+        </label>
+        <label>
+          FR
+          <input formControlName="fr" type="text" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Datos antropométricos</h2>
+      <div formGroupName="antropometricos" class="grid grid-4">
+        <label>
+          Edad
+          <input formControlName="edad" type="text" />
+        </label>
+        <label>
+          Edad metabólica
+          <input formControlName="edadMetabolica" type="text" />
+        </label>
+        <label>
+          Sexo
+          <input formControlName="sexo" type="text" />
+        </label>
+        <label>
+          Peso
+          <input formControlName="peso" type="text" />
+        </label>
+        <label>
+          Masa muscular
+          <input formControlName="masaMuscular" type="text" />
+        </label>
+        <label>
+          % GC
+          <input formControlName="gcPorc" type="text" />
+        </label>
+        <label>
+          GC
+          <input formControlName="gc" type="text" />
+        </label>
+        <label>
+          Talla
+          <input formControlName="talla" type="text" />
+        </label>
+        <label>
+          % GV
+          <input formControlName="gvPorc" type="text" />
+        </label>
+        <label>
+          IMC
+          <input formControlName="imc" type="text" />
+        </label>
+        <label>
+          KCAL basales
+          <input formControlName="kcalBasales" type="text" />
+        </label>
+        <label>
+          Cinta de actividad física
+          <input formControlName="actividadFisica" type="text" />
+        </label>
+        <label>
+          Cintura
+          <input formControlName="cintura" type="text" />
+        </label>
+        <label>
+          Cadera
+          <input formControlName="cadera" type="text" />
+        </label>
+        <label>
+          Pantorrilla
+          <input formControlName="pantorrilla" type="text" />
+        </label>
+        <label>
+          C. brazo
+          <input formControlName="cBrazo" type="text" />
+        </label>
+        <label>
+          C. muslo
+          <input formControlName="cMuslo" type="text" />
+        </label>
+        <label>
+          Peso ajustado
+          <input formControlName="pesoAjustado" type="text" />
+        </label>
+        <label>
+          Factor de actividad física
+          <input formControlName="factorActividadFisica" type="text" />
+        </label>
+        <label>
+          Tiempos de comida
+          <input formControlName="tiemposComida" type="text" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Valores bioquímicos</h2>
+      <div formGroupName="valoresBioquimicos" class="grid grid-4">
+        <label>
+          Glicemia
+          <input formControlName="glicemia" type="text" />
+        </label>
+        <label>
+          Colesterol total
+          <input formControlName="colesterolTotal" type="text" />
+        </label>
+        <label>
+          Triglicéridos
+          <input formControlName="trigliceridos" type="text" />
+        </label>
+        <label>
+          HDL
+          <input formControlName="hdl" type="text" />
+        </label>
+        <label>
+          LDL
+          <input formControlName="ldl" type="text" />
+        </label>
+        <label>
+          TGO
+          <input formControlName="tgo" type="text" />
+        </label>
+        <label>
+          TGP
+          <input formControlName="tgp" type="text" />
+        </label>
+        <label>
+          Urea
+          <input formControlName="urea" type="text" />
+        </label>
+        <label>
+          Creatinina
+          <input formControlName="creatinina" type="text" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Frecuencia de consumo de alimentos</h2>
+      <div
+        class="frequency-card"
+        *ngFor="let category of foodCategories"
+        [attr.data-title]="category.title"
+      >
+        <div class="frequency-header">
+          <h3>{{ category.title }}</h3>
+          <p>Selecciona la frecuencia que mejor describe el consumo habitual.</p>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Alimento</th>
+                <th *ngFor="let option of supportedFrequencies">{{ option }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let food of category.items">
+                <td>{{ food }}</td>
+                <td *ngFor="let option of supportedFrequencies">
+                  <label class="radio-cell">
+                    <input
+                      type="radio"
+                      [attr.name]="frequencyKey(category.title, food)"
+                      [value]="option"
+                      [checked]="getFrequency(category.title, food) === option"
+                      (change)="setFrequency(category.title, food, option)"
+                    />
+                    <span class="visually-hidden">{{ option }}</span>
+                  </label>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Recordatorio de 24 h</h2>
+      <div formGroupName="recordatorio24h" class="grid grid-2">
+        <label>
+          Desayuno
+          <textarea formControlName="desayuno" rows="2"></textarea>
+        </label>
+        <label>
+          Snack
+          <textarea formControlName="snack1" rows="2"></textarea>
+        </label>
+        <label>
+          Almuerzo
+          <textarea formControlName="almuerzo" rows="2"></textarea>
+        </label>
+        <label>
+          Snack
+          <textarea formControlName="snack2" rows="2"></textarea>
+        </label>
+        <label>
+          Cena / merienda
+          <textarea formControlName="cena" rows="2"></textarea>
+        </label>
+        <label>
+          Extras
+          <textarea formControlName="extras" rows="2"></textarea>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Notas extras</h2>
+      <label class="full">
+        <textarea formControlName="notasExtras" rows="3" placeholder="Observaciones adicionales"></textarea>
+      </label>
+    </section>
+
+    <div class="actions">
+      <button type="submit" [disabled]="isSubmitting()">Guardar historia</button>
+      <button type="button" class="ghost" (click)="resetForm()">Restablecer</button>
+    </div>
+
+    <p class="feedback" *ngIf="resultMessage()">{{ resultMessage() }}</p>
+  </form>
+</div>
+
+<router-outlet></router-outlet>

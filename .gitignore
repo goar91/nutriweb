@@ -1,0 +1,8 @@
+/backend/bin/
+/backend/obj/
+/frontend/dist/
+/frontend/node_modules/
+/frontend/.angular/
+
+.vscode/
+*.log
