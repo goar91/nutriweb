@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { RouterOutlet } from '@angular/router';
 import { NutritionService } from './nutrition.service';
 
 interface FoodCategory {
@@ -12,7 +11,7 @@ interface FoodCategory {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterOutlet],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
