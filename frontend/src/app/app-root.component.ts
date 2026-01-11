@@ -2,14 +2,14 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { NavbarComponent } from './components/navbar/navbar.component';
-import { AuthService } from '@auth0/auth0-angular';
+import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [CommonModule, RouterOutlet, NavbarComponent],
   template: `
-    <app-navbar *ngIf="auth.isAuthenticated$ | async"></app-navbar>
+    <app-navbar *ngIf="authService.isAuthenticated()"></app-navbar>
     <router-outlet></router-outlet>
   `,
   styles: [`
@@ -20,5 +20,5 @@ import { AuthService } from '@auth0/auth0-angular';
   `]
 })
 export class AppRootComponent {
-  constructor(public auth: AuthService) {}
+  constructor(public authService: AuthService) {}
 }

@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { AuthService } from '@auth0/auth0-angular';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-navbar',
@@ -44,10 +44,12 @@ import { AuthService } from '@auth0/auth0-angular';
             Nueva Historia
           </a>
 
-          <div class="nav-user" *ngIf="auth.user$ | async as user">
-            <img [src]="user.picture" [alt]="user.name" class="user-avatar" />
+          <div class="nav-user" *ngIf="authService.currentUser$ | async as user">
+            <div class="user-avatar">
+              {{ user.nombre ? user.nombre.charAt(0).toUpperCase() : user.username.charAt(0).toUpperCase() }}
+            </div>
             <div class="user-info">
-              <span class="user-name">{{ user.name }}</span>
+              <span class="user-name">{{ user.nombre || user.username }}</span>
               <button class="logout-link" (click)="logout()">Cerrar sesión</button>
             </div>
           </div>
@@ -133,7 +135,13 @@ import { AuthService } from '@auth0/auth0-angular';
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      object-fit: cover;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.875rem;
     }
 
     .user-info {
@@ -211,7 +219,7 @@ import { AuthService } from '@auth0/auth0-angular';
 export class NavbarComponent {
   mobileMenuOpen = false;
 
-  constructor(public auth: AuthService) {}
+  constructor(public authService: AuthService) {}
 
   toggleMobileMenu(): void {
     this.mobileMenuOpen = !this.mobileMenuOpen;
@@ -222,6 +230,6 @@ export class NavbarComponent {
   }
 
   logout(): void {
-    this.auth.logout({ logoutParams: { returnTo: window.location.origin } });
+    this.authService.logout();
   }
 }

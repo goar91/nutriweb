@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { AuthService } from '@auth0/auth0-angular';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -297,5 +297,5 @@ import { AuthService } from '@auth0/auth0-angular';
   `]
 })
 export class DashboardComponent {
-  constructor(public auth: AuthService) {}
+  constructor(public authService: AuthService) {}
 }

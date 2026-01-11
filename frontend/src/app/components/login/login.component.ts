@@ -1,58 +1,116 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AuthService } from '@auth0/auth0-angular';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ReactiveFormsModule],
   template: `
     <div class="login-container">
       <div class="login-card">
         <div class="login-header">
           <div class="logo">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="48" height="48" rx="12" fill="#6366f1"/>
-              <path d="M24 12C17.373 12 12 17.373 12 24C12 30.627 17.373 36 24 36C30.627 36 36 30.627 36 24C36 17.373 30.627 12 24 12ZM24 33C19.029 33 15 28.971 15 24C15 19.029 19.029 15 24 15C28.971 15 33 19.029 33 24C33 28.971 28.971 33 24 33Z" fill="white"/>
-              <path d="M24 18C20.686 18 18 20.686 18 24C18 27.314 20.686 30 24 30C27.314 30 30 27.314 30 24C30 20.686 27.314 18 24 18ZM24 27C22.343 27 21 25.657 21 24C21 22.343 22.343 21 24 21C25.657 21 27 22.343 27 24C27 25.657 25.657 27 24 27Z" fill="white"/>
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <circle cx="24" cy="24" r="20" fill="url(#gradient)" />
+              <path d="M24 12v24M16 24h16" stroke="white" stroke-width="3" stroke-linecap="round"/>
+              <defs>
+                <linearGradient id="gradient" x1="0" y1="0" x2="48" y2="48">
+                  <stop offset="0%" stop-color="#667eea" />
+                  <stop offset="100%" stop-color="#764ba2" />
+                </linearGradient>
+              </defs>
             </svg>
           </div>
           <h1>NutriWeb</h1>
-          <p class="subtitle">Plataforma de gestión nutricional</p>
+          <p>Sistema de Historias Clínicas Nutricionales</p>
         </div>
 
-        <div class="login-body">
-          <h2>Bienvenido</h2>
-          <p class="description">
-            Inicia sesión para acceder a la plataforma de historias clínicas nutricionales
-          </p>
-
-          <button 
-            class="login-btn" 
-            (click)="loginWithRedirect()"
-            *ngIf="!(auth.isAuthenticated$ | async)">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M10 0C4.486 0 0 4.486 0 10C0 15.514 4.486 20 10 20C15.514 20 20 15.514 20 10C20 4.486 15.514 0 10 0ZM10 3C11.657 3 13 4.343 13 6C13 7.657 11.657 9 10 9C8.343 9 7 7.657 7 6C7 4.343 8.343 3 10 3ZM10 17C7.33 17 5.02 15.45 3.88 13.16C3.91 10.82 8.56 9.53 10 9.53C11.43 9.53 16.09 10.82 16.12 13.16C14.98 15.45 12.67 17 10 17Z" fill="white"/>
-            </svg>
-            Iniciar sesión con Auth0
-          </button>
-
-          <div class="user-info" *ngIf="auth.isAuthenticated$ | async">
-            <div class="avatar" *ngIf="(auth.user$ | async)?.picture">
-              <img [src]="(auth.user$ | async)?.picture" [alt]="(auth.user$ | async)?.name" />
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+          @if (errorMessage()) {
+            <div class="error-alert">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>
+              </svg>
+              {{ errorMessage() }}
             </div>
-            <div class="user-details">
-              <p class="user-name">{{ (auth.user$ | async)?.name }}</p>
-              <p class="user-email">{{ (auth.user$ | async)?.email }}</p>
-            </div>
-            <button class="logout-btn" (click)="logout()">
-              Cerrar sesión
-            </button>
+          }
+
+          <div class="form-group">
+            <label for="username">Usuario</label>
+            <input
+              id="username"
+              type="text"
+              formControlName="username"
+              placeholder="Ingrese su usuario"
+              [class.invalid]="loginForm.get('username')?.invalid && loginForm.get('username')?.touched"
+            />
+            @if (loginForm.get('username')?.invalid && loginForm.get('username')?.touched) {
+              <span class="error-text">El usuario es requerido</span>
+            }
           </div>
-        </div>
+
+          <div class="form-group">
+            <label for="password">Contraseña</label>
+            <div class="password-input">
+              <input
+                id="password"
+                [type]="showPassword() ? 'text' : 'password'"
+                formControlName="password"
+                placeholder="Ingrese su contraseña"
+                [class.invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+              />
+              <button
+                type="button"
+                class="toggle-password"
+                (click)="togglePassword()"
+                tabindex="-1"
+              >
+                @if (showPassword()) {
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/>
+                  </svg>
+                } @else {
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z"/>
+                    <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>
+                  </svg>
+                }
+              </button>
+            </div>
+            @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+              <span class="error-text">La contraseña es requerida</span>
+            }
+          </div>
+
+          <div class="form-group-checkbox">
+            <input
+              id="remember"
+              type="checkbox"
+              formControlName="rememberMe"
+            />
+            <label for="remember">Recordar mi sesión</label>
+          </div>
+
+          <button
+            type="submit"
+            class="btn-login"
+            [disabled]="loginForm.invalid || isLoading()"
+          >
+            @if (isLoading()) {
+              <span class="spinner"></span>
+              Iniciando sesión...
+            } @else {
+              Iniciar Sesión
+            }
+          </button>
+        </form>
 
         <div class="login-footer">
-          <p>¿Necesitas ayuda? <a href="#">Contáctanos</a></p>
+          <p>© 2024 NutriWeb. Todos los derechos reservados.</p>
         </div>
       </div>
     </div>
@@ -69,18 +127,18 @@ import { AuthService } from '@auth0/auth0-angular';
 
     .login-card {
       background: white;
-      border-radius: 24px;
+      border-radius: 1rem;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      max-width: 440px;
       width: 100%;
+      max-width: 440px;
       overflow: hidden;
-      animation: slideUp 0.6s ease-out;
+      animation: slideIn 0.3s ease-out;
     }
 
-    @keyframes slideUp {
+    @keyframes slideIn {
       from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(-20px);
       }
       to {
         opacity: 1;
@@ -89,186 +147,253 @@ import { AuthService } from '@auth0/auth0-angular';
     }
 
     .login-header {
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
       padding: 3rem 2rem 2rem;
       text-align: center;
-      color: white;
     }
 
     .logo {
-      margin: 0 auto 1rem;
-      width: fit-content;
+      margin-bottom: 1rem;
     }
 
     .login-header h1 {
-      margin: 0 0 0.5rem;
       font-size: 2rem;
       font-weight: 700;
-    }
-
-    .subtitle {
-      margin: 0;
-      opacity: 0.95;
-      font-size: 1rem;
-    }
-
-    .login-body {
-      padding: 2.5rem 2rem;
-    }
-
-    .login-body h2 {
       margin: 0 0 0.5rem;
-      font-size: 1.75rem;
-      color: #1f2937;
     }
 
-    .description {
-      margin: 0 0 2rem;
-      color: #6b7280;
-      line-height: 1.6;
+    .login-header p {
+      font-size: 0.95rem;
+      opacity: 0.95;
+      margin: 0;
     }
 
-    .login-btn {
-      width: 100%;
-      padding: 1rem 1.5rem;
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 1rem;
+    .login-form {
+      padding: 2rem;
+    }
+
+    .error-alert {
+      background: #fee;
+      color: #c33;
+      padding: 0.875rem 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+      border: 1px solid #fcc;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
       font-weight: 600;
+      color: #333;
+      font-size: 0.95rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.875rem 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      transition: all 0.2s;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group input.invalid {
+      border-color: #f44336;
+    }
+
+    .password-input {
+      position: relative;
+    }
+
+    .password-input input {
+      padding-right: 3rem;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #666;
       cursor: pointer;
+      padding: 0.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.75rem;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+      transition: color 0.2s;
     }
 
-    .login-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    .toggle-password:hover {
+      color: #667eea;
     }
 
-    .login-btn:active {
-      transform: translateY(0);
+    .error-text {
+      display: block;
+      color: #f44336;
+      font-size: 0.85rem;
+      margin-top: 0.375rem;
     }
 
-    .user-info {
-      background: #f9fafb;
-      border-radius: 12px;
-      padding: 1.5rem;
+    .form-group-checkbox {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 1rem;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
     }
 
-    .avatar {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      overflow: hidden;
-      border: 4px solid white;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    .form-group-checkbox input[type="checkbox"] {
+      width: 1.125rem;
+      height: 1.125rem;
+      cursor: pointer;
     }
 
-    .avatar img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .user-details {
-      text-align: center;
-    }
-
-    .user-name {
-      margin: 0 0 0.25rem;
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: #1f2937;
-    }
-
-    .user-email {
-      margin: 0;
-      color: #6b7280;
+    .form-group-checkbox label {
+      cursor: pointer;
+      user-select: none;
+      color: #666;
       font-size: 0.9rem;
     }
 
-    .logout-btn {
+    .btn-login {
       width: 100%;
-      padding: 0.75rem 1.5rem;
-      background: white;
-      color: #6366f1;
-      border: 2px solid #6366f1;
-      border-radius: 12px;
-      font-size: 0.95rem;
+      padding: 1rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 1rem;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
     }
 
-    .logout-btn:hover {
-      background: #6366f1;
-      color: white;
+    .btn-login:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-login:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     .login-footer {
       padding: 1.5rem 2rem;
-      background: #f9fafb;
+      background: #f8f9fa;
       text-align: center;
-      border-top: 1px solid #e5e7eb;
+      border-top: 1px solid #e0e0e0;
     }
 
     .login-footer p {
       margin: 0;
-      color: #6b7280;
-      font-size: 0.9rem;
-    }
-
-    .login-footer a {
-      color: #6366f1;
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    .login-footer a:hover {
-      text-decoration: underline;
+      color: #666;
+      font-size: 0.85rem;
     }
 
     @media (max-width: 480px) {
       .login-card {
-        border-radius: 16px;
+        border-radius: 0;
       }
 
       .login-header {
         padding: 2rem 1.5rem 1.5rem;
       }
 
-      .login-header h1 {
-        font-size: 1.5rem;
+      .login-form {
+        padding: 1.5rem;
       }
 
-      .login-body {
-        padding: 2rem 1.5rem;
-      }
-
-      .login-body h2 {
-        font-size: 1.5rem;
+      .login-footer {
+        padding: 1rem 1.5rem;
       }
     }
   `]
 })
 export class LoginComponent {
-  constructor(public auth: AuthService) {}
+  loginForm: FormGroup;
+  isLoading = signal(false);
+  errorMessage = signal('');
+  showPassword = signal(false);
 
-  loginWithRedirect(): void {
-    this.auth.loginWithRedirect();
+  constructor(
+    private fb: FormBuilder,
+    private authService: AuthService,
+    private router: Router
+  ) {
+    this.loginForm = this.fb.group({
+      username: ['', Validators.required],
+      password: ['', Validators.required],
+      rememberMe: [false]
+    });
   }
 
-  logout(): void {
-    this.auth.logout({ logoutParams: { returnTo: window.location.origin } });
+  onSubmit(): void {
+    if (this.loginForm.valid) {
+      this.isLoading.set(true);
+      this.errorMessage.set('');
+
+      const { username, password } = this.loginForm.value;
+
+      this.authService.login(username, password).subscribe({
+        next: (response) => {
+          this.isLoading.set(false);
+          if (response.success) {
+            this.router.navigate(['/dashboard']);
+          }
+        },
+        error: (error) => {
+          this.isLoading.set(false);
+          if (error.status === 401) {
+            this.errorMessage.set('Usuario o contraseña incorrectos');
+          } else {
+            this.errorMessage.set('Error al iniciar sesión. Por favor, intente nuevamente.');
+          }
+        }
+      });
+    }
+  }
+
+  togglePassword(): void {
+    this.showPassword.set(!this.showPassword());
   }
 }

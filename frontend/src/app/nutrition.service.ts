@@ -1,12 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { environment } from '../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class NutritionService {
-  private readonly baseUrl = `${environment.apiUrl}/nutrition`;
+  private readonly baseUrl = 'http://localhost:5000/api/nutrition';
 
   constructor(private readonly http: HttpClient) {}
 
