@@ -228,6 +228,361 @@ app.MapPost("/api/nutrition/history", async (HistoryRequest request, HttpContext
     return Results.Created($"/api/nutrition/history/{historiaId}", new { status = "created", id = historiaId });
 });
 
+// ============================================
+// API de Pacientes
+// ============================================
+
+app.MapGet("/api/pacientes", async (HttpContext httpContext) =>
+{
+    if (!TryGetToken(httpContext, out var token) || token is null || !IsTokenValid(token, activeSessions, out var user))
+    {
+        return Results.Unauthorized();
+    }
+
+    await using var connection = new NpgsqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    await using var cmd = new NpgsqlCommand(
+        @"SELECT id, numero_cedula, nombre, edad_cronologica, sexo, telefono, email, 
+                 fecha_creacion, fecha_actualizacion
+          FROM pacientes
+          ORDER BY fecha_actualizacion DESC",
+        connection);
+
+    var pacientes = new List<object>();
+    await using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        pacientes.Add(new
+        {
+            id = reader.GetGuid(0),
+            numeroCedula = reader.IsDBNull(1) ? null : reader.GetString(1),
+            nombre = reader.IsDBNull(2) ? null : reader.GetString(2),
+            edadCronologica = reader.IsDBNull(3) ? null : reader.GetString(3),
+            sexo = reader.IsDBNull(4) ? null : reader.GetString(4),
+            telefono = reader.IsDBNull(5) ? null : reader.GetString(5),
+            email = reader.IsDBNull(6) ? null : reader.GetString(6),
+            fechaCreacion = reader.GetDateTime(7),
+            fechaActualizacion = reader.GetDateTime(8)
+        });
+    }
+
+    return Results.Ok(pacientes);
+});
+
+app.MapGet("/api/pacientes/{id:guid}", async (Guid id, HttpContext httpContext) =>
+{
+    if (!TryGetToken(httpContext, out var token) || token is null || !IsTokenValid(token, activeSessions, out var user))
+    {
+        return Results.Unauthorized();
+    }
+
+    await using var connection = new NpgsqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    await using var cmd = new NpgsqlCommand(
+        @"SELECT id, numero_cedula, nombre, edad_cronologica, sexo, lugar_residencia, 
+                 estado_civil, telefono, ocupacion, email, fecha_creacion, fecha_actualizacion
+          FROM pacientes
+          WHERE id = @id
+          LIMIT 1",
+        connection);
+    cmd.Parameters.AddWithValue("id", id);
+
+    await using var reader = await cmd.ExecuteReaderAsync();
+    if (!await reader.ReadAsync())
+    {
+        return Results.NotFound(new { error = "Paciente no encontrado" });
+    }
+
+    var paciente = new
+    {
+        id = reader.GetGuid(0),
+        numeroCedula = reader.IsDBNull(1) ? null : reader.GetString(1),
+        nombre = reader.IsDBNull(2) ? null : reader.GetString(2),
+        edadCronologica = reader.IsDBNull(3) ? null : reader.GetString(3),
+        sexo = reader.IsDBNull(4) ? null : reader.GetString(4),
+        lugarResidencia = reader.IsDBNull(5) ? null : reader.GetString(5),
+        estadoCivil = reader.IsDBNull(6) ? null : reader.GetString(6),
+        telefono = reader.IsDBNull(7) ? null : reader.GetString(7),
+        ocupacion = reader.IsDBNull(8) ? null : reader.GetString(8),
+        email = reader.IsDBNull(9) ? null : reader.GetString(9),
+        fechaCreacion = reader.GetDateTime(10),
+        fechaActualizacion = reader.GetDateTime(11)
+    };
+
+    return Results.Ok(paciente);
+});
+
+app.MapGet("/api/pacientes/{id:guid}/historias", async (Guid id, HttpContext httpContext) =>
+{
+    if (!TryGetToken(httpContext, out var token) || token is null || !IsTokenValid(token, activeSessions, out var user))
+    {
+        return Results.Unauthorized();
+    }
+
+    await using var connection = new NpgsqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    await using var cmd = new NpgsqlCommand(
+        @"SELECT h.id, h.fecha_consulta, h.motivo_consulta, h.diagnostico, h.fecha_registro,
+                 a.imc, a.peso, a.talla
+          FROM historias_clinicas h
+          LEFT JOIN datos_antropometricos a ON a.historia_id = h.id
+          WHERE h.paciente_id = @pacienteId
+          ORDER BY h.fecha_consulta DESC",
+        connection);
+    cmd.Parameters.AddWithValue("pacienteId", id);
+
+    var historias = new List<object>();
+    await using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        historias.Add(new
+        {
+            id = reader.GetGuid(0),
+            fechaConsulta = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1),
+            motivoConsulta = reader.IsDBNull(2) ? null : reader.GetString(2),
+            diagnostico = reader.IsDBNull(3) ? null : reader.GetString(3),
+            fechaRegistro = reader.GetDateTime(4),
+            imc = reader.IsDBNull(5) ? (decimal?)null : reader.GetDecimal(5),
+            peso = reader.IsDBNull(6) ? (decimal?)null : reader.GetDecimal(6),
+            talla = reader.IsDBNull(7) ? (decimal?)null : reader.GetDecimal(7)
+        });
+    }
+
+    return Results.Ok(historias);
+});
+
+app.MapDelete("/api/pacientes/{id:guid}", async (Guid id, HttpContext httpContext) =>
+{
+    if (!TryGetToken(httpContext, out var token) || token is null || !IsTokenValid(token, activeSessions, out var user))
+    {
+        return Results.Unauthorized();
+    }
+
+    await using var connection = new NpgsqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    await using var cmd = new NpgsqlCommand(
+        "DELETE FROM pacientes WHERE id = @id",
+        connection);
+    cmd.Parameters.AddWithValue("id", id);
+
+    var affected = await cmd.ExecuteNonQueryAsync();
+    if (affected == 0)
+    {
+        return Results.NotFound(new { error = "Paciente no encontrado" });
+    }
+
+    return Results.Ok(new { success = true, message = "Paciente eliminado" });
+});
+
+// ============================================
+// API de Reportes
+// ============================================
+
+app.MapGet("/api/reportes/estadisticas", async (HttpContext httpContext) =>
+{
+    if (!TryGetToken(httpContext, out var token) || token is null || !IsTokenValid(token, activeSessions, out var user))
+    {
+        return Results.Unauthorized();
+    }
+
+    await using var connection = new NpgsqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    await using var cmd = new NpgsqlCommand(
+        @"SELECT 
+            (SELECT COUNT(*) FROM pacientes) as total_pacientes,
+            (SELECT COUNT(*) FROM historias_clinicas) as total_historias,
+            (SELECT COUNT(*) FROM pacientes WHERE DATE_PART('day', NOW() - fecha_creacion) <= 30) as pacientes_mes,
+            (SELECT COUNT(*) FROM historias_clinicas WHERE DATE_PART('day', NOW() - fecha_registro) <= 30) as historias_mes,
+            (SELECT COUNT(*) FROM pacientes WHERE sexo = 'F' OR sexo = 'f') as pacientes_femenino,
+            (SELECT COUNT(*) FROM pacientes WHERE sexo = 'M' OR sexo = 'm') as pacientes_masculino",
+        connection);
+
+    await using var reader = await cmd.ExecuteReaderAsync();
+    if (!await reader.ReadAsync())
+    {
+        return Results.Ok(new
+        {
+            totalPacientes = 0,
+            totalHistorias = 0,
+            pacientesMes = 0,
+            historiasMes = 0,
+            pacientesFemenino = 0,
+            pacientesMasculino = 0
+        });
+    }
+
+    var stats = new
+    {
+        totalPacientes = reader.GetInt64(0),
+        totalHistorias = reader.GetInt64(1),
+        pacientesMes = reader.GetInt64(2),
+        historiasMes = reader.GetInt64(3),
+        pacientesFemenino = reader.GetInt64(4),
+        pacientesMasculino = reader.GetInt64(5)
+    };
+
+    return Results.Ok(stats);
+});
+
+app.MapGet("/api/reportes/pacientes", async (string? fechaDesde, string? fechaHasta, HttpContext httpContext) =>
+{
+    if (!TryGetToken(httpContext, out var token) || token is null || !IsTokenValid(token, activeSessions, out var user))
+    {
+        return Results.Unauthorized();
+    }
+
+    await using var connection = new NpgsqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    var sql = @"SELECT 
+            p.id,
+            p.numero_cedula,
+            p.nombre,
+            p.edad_cronologica,
+            p.sexo,
+            p.telefono,
+            p.email,
+            p.fecha_creacion,
+            COUNT(h.id) as total_historias,
+            MAX(h.fecha_consulta) as ultima_consulta
+        FROM pacientes p
+        LEFT JOIN historias_clinicas h ON h.paciente_id = p.id";
+
+    var whereClauses = new List<string>();
+    if (!string.IsNullOrWhiteSpace(fechaDesde))
+    {
+        whereClauses.Add("p.fecha_creacion >= @fechaDesde");
+    }
+    if (!string.IsNullOrWhiteSpace(fechaHasta))
+    {
+        whereClauses.Add("p.fecha_creacion <= @fechaHasta");
+    }
+
+    if (whereClauses.Count > 0)
+    {
+        sql += " WHERE " + string.Join(" AND ", whereClauses);
+    }
+
+    sql += @" GROUP BY p.id, p.numero_cedula, p.nombre, p.edad_cronologica, p.sexo, p.telefono, p.email, p.fecha_creacion
+              ORDER BY p.fecha_creacion DESC";
+
+    await using var cmd = new NpgsqlCommand(sql, connection);
+    if (!string.IsNullOrWhiteSpace(fechaDesde))
+    {
+        cmd.Parameters.AddWithValue("fechaDesde", DateTime.Parse(fechaDesde));
+    }
+    if (!string.IsNullOrWhiteSpace(fechaHasta))
+    {
+        cmd.Parameters.AddWithValue("fechaHasta", DateTime.Parse(fechaHasta));
+    }
+
+    var pacientes = new List<object>();
+    await using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        pacientes.Add(new
+        {
+            id = reader.GetGuid(0),
+            numeroCedula = reader.IsDBNull(1) ? null : reader.GetString(1),
+            nombre = reader.IsDBNull(2) ? null : reader.GetString(2),
+            edadCronologica = reader.IsDBNull(3) ? null : reader.GetString(3),
+            sexo = reader.IsDBNull(4) ? null : reader.GetString(4),
+            telefono = reader.IsDBNull(5) ? null : reader.GetString(5),
+            email = reader.IsDBNull(6) ? null : reader.GetString(6),
+            fechaCreacion = reader.GetDateTime(7),
+            totalHistorias = reader.GetInt64(8),
+            ultimaConsulta = reader.IsDBNull(9) ? (DateTime?)null : reader.GetDateTime(9)
+        });
+    }
+
+    return Results.Ok(pacientes);
+});
+
+app.MapGet("/api/reportes/historias", async (string? fechaDesde, string? fechaHasta, HttpContext httpContext) =>
+{
+    if (!TryGetToken(httpContext, out var token) || token is null || !IsTokenValid(token, activeSessions, out var user))
+    {
+        return Results.Unauthorized();
+    }
+
+    await using var connection = new NpgsqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    var sql = @"SELECT 
+            h.id as historia_id,
+            h.fecha_consulta,
+            h.motivo_consulta,
+            h.diagnostico,
+            h.fecha_registro,
+            p.id as paciente_id,
+            p.numero_cedula,
+            p.nombre,
+            p.edad_cronologica,
+            p.sexo,
+            a.imc,
+            a.peso,
+            a.talla
+        FROM historias_clinicas h
+        INNER JOIN pacientes p ON h.paciente_id = p.id
+        LEFT JOIN datos_antropometricos a ON a.historia_id = h.id";
+
+    var whereClauses = new List<string>();
+    if (!string.IsNullOrWhiteSpace(fechaDesde))
+    {
+        whereClauses.Add("h.fecha_consulta >= @fechaDesde");
+    }
+    if (!string.IsNullOrWhiteSpace(fechaHasta))
+    {
+        whereClauses.Add("h.fecha_consulta <= @fechaHasta");
+    }
+
+    if (whereClauses.Count > 0)
+    {
+        sql += " WHERE " + string.Join(" AND ", whereClauses);
+    }
+
+    sql += " ORDER BY h.fecha_registro DESC LIMIT 500";
+
+    await using var cmd = new NpgsqlCommand(sql, connection);
+    if (!string.IsNullOrWhiteSpace(fechaDesde))
+    {
+        cmd.Parameters.AddWithValue("fechaDesde", DateTime.Parse(fechaDesde));
+    }
+    if (!string.IsNullOrWhiteSpace(fechaHasta))
+    {
+        cmd.Parameters.AddWithValue("fechaHasta", DateTime.Parse(fechaHasta));
+    }
+
+    var historias = new List<object>();
+    await using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        historias.Add(new
+        {
+            historiaId = reader.GetGuid(0),
+            fechaConsulta = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1),
+            motivoConsulta = reader.IsDBNull(2) ? null : reader.GetString(2),
+            diagnostico = reader.IsDBNull(3) ? null : reader.GetString(3),
+            fechaRegistro = reader.GetDateTime(4),
+            pacienteId = reader.GetGuid(5),
+            numeroCedula = reader.IsDBNull(6) ? null : reader.GetString(6),
+            nombrePaciente = reader.IsDBNull(7) ? null : reader.GetString(7),
+            edad = reader.IsDBNull(8) ? null : reader.GetString(8),
+            sexo = reader.IsDBNull(9) ? null : reader.GetString(9),
+            imc = reader.IsDBNull(10) ? (decimal?)null : reader.GetDecimal(10),
+            peso = reader.IsDBNull(11) ? (decimal?)null : reader.GetDecimal(11),
+            talla = reader.IsDBNull(12) ? (decimal?)null : reader.GetDecimal(12)
+        });
+    }
+
+    return Results.Ok(historias);
+});
+
 app.Run();
 
 static string ResolveConnectionString(IConfiguration configuration)

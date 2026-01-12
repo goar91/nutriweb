@@ -1,0 +1,228 @@
+<div class="reportes-container">
+  <header class="page-header">
+    <h1>📊 Reportes y Estadísticas</h1>
+  </header>
+
+  <!-- Selector de Tipo de Reporte -->
+  <div class="reporte-selector">
+    <button 
+      class="selector-btn"
+      [class.active]="tipoReporte() === 'estadisticas'"
+      (click)="cambiarTipoReporte('estadisticas')">
+      📈 Estadísticas Generales
+    </button>
+    <button 
+      class="selector-btn"
+      [class.active]="tipoReporte() === 'pacientes'"
+      (click)="cambiarTipoReporte('pacientes')">
+      👥 Reporte de Pacientes
+    </button>
+    <button 
+      class="selector-btn"
+      [class.active]="tipoReporte() === 'historias'"
+      (click)="cambiarTipoReporte('historias')">
+      📋 Reporte de Historias Clínicas
+    </button>
+  </div>
+
+  <!-- Filtros de Fecha -->
+  @if (tipoReporte() !== 'estadisticas') {
+    <div class="filtros-container">
+      <div class="filtro-group">
+        <label>Fecha Desde:</label>
+        <input type="date" [(ngModel)]="fechaDesde" />
+      </div>
+      <div class="filtro-group">
+        <label>Fecha Hasta:</label>
+        <input type="date" [(ngModel)]="fechaHasta" />
+      </div>
+      <button class="btn btn-primary" (click)="generarReporte()">
+        🔍 Generar Reporte
+      </button>
+      @if (tipoReporte() === 'pacientes' && pacientes().length > 0 || 
+            tipoReporte() === 'historias' && historias().length > 0) {
+        <button class="btn btn-success" (click)="exportarCSV()">
+          📥 Exportar CSV
+        </button>
+      }
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Generando reporte...</p>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="error-message">
+      <p>{{ error() }}</p>
+    </div>
+  }
+
+  <!-- Estadísticas Generales -->
+  @if (!loading() && tipoReporte() === 'estadisticas' && estadisticas()) {
+    <div class="estadisticas-grid">
+      <div class="stat-card card-primary">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ estadisticas()!.totalPacientes }}</div>
+          <div class="stat-label">Total de Pacientes</div>
+        </div>
+      </div>
+
+      <div class="stat-card card-success">
+        <div class="stat-icon">📋</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ estadisticas()!.totalHistorias }}</div>
+          <div class="stat-label">Historias Clínicas</div>
+        </div>
+      </div>
+
+      <div class="stat-card card-info">
+        <div class="stat-icon">📅</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ estadisticas()!.pacientesMes }}</div>
+          <div class="stat-label">Pacientes Este Mes</div>
+        </div>
+      </div>
+
+      <div class="stat-card card-warning">
+        <div class="stat-icon">📝</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ estadisticas()!.historiasMes }}</div>
+          <div class="stat-label">Historias Este Mes</div>
+        </div>
+      </div>
+
+      <div class="stat-card card-pink">
+        <div class="stat-icon">👩</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ estadisticas()!.pacientesFemenino }}</div>
+          <div class="stat-label">Pacientes Femeninas</div>
+        </div>
+      </div>
+
+      <div class="stat-card card-blue">
+        <div class="stat-icon">👨</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ estadisticas()!.pacientesMasculino }}</div>
+          <div class="stat-label">Pacientes Masculinos</div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Reporte de Pacientes -->
+  @if (!loading() && tipoReporte() === 'pacientes') {
+    <div class="reporte-section">
+      <div class="reporte-header">
+        <h2>Reporte de Pacientes</h2>
+        <p>Total de registros: {{ pacientes().length }}</p>
+      </div>
+
+      @if (pacientes().length === 0) {
+        <div class="no-data">
+          <p>No hay datos para mostrar. Ajuste los filtros e intente nuevamente.</p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table class="reporte-table">
+            <thead>
+              <tr>
+                <th>Cédula</th>
+                <th>Nombre</th>
+                <th>Edad</th>
+                <th>Sexo</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>Total Historias</th>
+                <th>Última Consulta</th>
+                <th>Fecha Registro</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (paciente of pacientes(); track paciente.id) {
+                <tr>
+                  <td>{{ paciente.numeroCedula || 'N/A' }}</td>
+                  <td class="nombre-cell">{{ paciente.nombre }}</td>
+                  <td>{{ paciente.edadCronologica || 'N/A' }}</td>
+                  <td>
+                    <span class="sexo-badge" 
+                          [class.masculino]="paciente.sexo === 'M'" 
+                          [class.femenino]="paciente.sexo === 'F'">
+                      {{ paciente.sexo === 'M' ? 'M' : paciente.sexo === 'F' ? 'F' : 'N/A' }}
+                    </span>
+                  </td>
+                  <td>{{ paciente.telefono || 'N/A' }}</td>
+                  <td>{{ paciente.email || 'N/A' }}</td>
+                  <td class="text-center">{{ paciente.totalHistorias }}</td>
+                  <td>{{ paciente.ultimaConsulta ? formatDate(paciente.ultimaConsulta) : 'N/A' }}</td>
+                  <td>{{ formatDate(paciente.fechaCreacion) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Reporte de Historias -->
+  @if (!loading() && tipoReporte() === 'historias') {
+    <div class="reporte-section">
+      <div class="reporte-header">
+        <h2>Reporte de Historias Clínicas</h2>
+        <p>Total de registros: {{ historias().length }}</p>
+      </div>
+
+      @if (historias().length === 0) {
+        <div class="no-data">
+          <p>No hay datos para mostrar. Ajuste los filtros e intente nuevamente.</p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table class="reporte-table">
+            <thead>
+              <tr>
+                <th>Fecha Consulta</th>
+                <th>Paciente</th>
+                <th>Cédula</th>
+                <th>Edad</th>
+                <th>Sexo</th>
+                <th>Motivo</th>
+                <th>Diagnóstico</th>
+                <th>IMC</th>
+                <th>Peso (kg)</th>
+                <th>Talla (cm)</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (historia of historias(); track historia.historiaId) {
+                <tr>
+                  <td>{{ historia.fechaConsulta ? formatDate(historia.fechaConsulta) : 'N/A' }}</td>
+                  <td class="nombre-cell">{{ historia.nombrePaciente }}</td>
+                  <td>{{ historia.numeroCedula || 'N/A' }}</td>
+                  <td>{{ historia.edad || 'N/A' }}</td>
+                  <td>
+                    <span class="sexo-badge" 
+                          [class.masculino]="historia.sexo === 'M'" 
+                          [class.femenino]="historia.sexo === 'F'">
+                      {{ historia.sexo === 'M' ? 'M' : historia.sexo === 'F' ? 'F' : 'N/A' }}
+                    </span>
+                  </td>
+                  <td class="motivo-cell">{{ historia.motivoConsulta || 'N/A' }}</td>
+                  <td class="diagnostico-cell">{{ historia.diagnostico || 'N/A' }}</td>
+                  <td class="text-center">{{ historia.imc || 'N/A' }}</td>
+                  <td class="text-center">{{ historia.peso || 'N/A' }}</td>
+                  <td class="text-center">{{ historia.talla || 'N/A' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+</div>
