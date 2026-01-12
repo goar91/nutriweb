@@ -1,0 +1,124 @@
+<div class="detalle-container">
+  <header class="page-header">
+    <button class="btn-back" (click)="volver()">← Volver a Pacientes</button>
+    <h1>Detalle del Paciente</h1>
+  </header>
+
+  @if (loading()) {
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Cargando información...</p>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="error-message">
+      <p>{{ error() }}</p>
+      <button class="btn btn-secondary" (click)="loadPaciente()">Reintentar</button>
+    </div>
+  }
+
+  @if (!loading() && !error() && paciente()) {
+    <div class="content-grid">
+      <!-- Información Personal -->
+      <section class="info-card">
+        <h2>Información Personal</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <label>Nombre:</label>
+            <span>{{ paciente()!.nombre }}</span>
+          </div>
+          <div class="info-item">
+            <label>Cédula:</label>
+            <span>{{ paciente()!.numeroCedula || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Edad:</label>
+            <span>{{ paciente()!.edadCronologica || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Sexo:</label>
+            <span>{{ paciente()!.sexo === 'M' ? 'Masculino' : paciente()!.sexo === 'F' ? 'Femenino' : 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Estado Civil:</label>
+            <span>{{ paciente()!.estadoCivil || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Ocupación:</label>
+            <span>{{ paciente()!.ocupacion || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Teléfono:</label>
+            <span>{{ paciente()!.telefono || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Email:</label>
+            <span>{{ paciente()!.email || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Residencia:</label>
+            <span>{{ paciente()!.lugarResidencia || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Fecha de Registro:</label>
+            <span>{{ formatDate(paciente()!.fechaCreacion) }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Historias Clínicas -->
+      <section class="historias-card">
+        <h2>Historias Clínicas ({{ historias().length }})</h2>
+        
+        @if (historias().length === 0) {
+          <div class="no-historias">
+            <p>No hay historias clínicas registradas para este paciente</p>
+          </div>
+        } @else {
+          <div class="historias-list">
+            @for (historia of historias(); track historia.id) {
+              <div class="historia-item">
+                <div class="historia-header">
+                  <div class="fecha-consulta">
+                    📅 {{ formatDate(historia.fechaConsulta) }}
+                  </div>
+                  @if (historia.imc) {
+                    <div class="imc-badge">
+                      IMC: {{ historia.imc }}
+                    </div>
+                  }
+                </div>
+                <div class="historia-body">
+                  @if (historia.motivoConsulta) {
+                    <div class="historia-field">
+                      <strong>Motivo:</strong> {{ historia.motivoConsulta }}
+                    </div>
+                  }
+                  @if (historia.diagnostico) {
+                    <div class="historia-field">
+                      <strong>Diagnóstico:</strong> {{ historia.diagnostico }}
+                    </div>
+                  }
+                  @if (historia.peso || historia.talla) {
+                    <div class="medidas">
+                      @if (historia.peso) {
+                        <span>Peso: {{ historia.peso }} kg</span>
+                      }
+                      @if (historia.talla) {
+                        <span>Talla: {{ historia.talla }} cm</span>
+                      }
+                    </div>
+                  }
+                </div>
+                <div class="historia-footer">
+                  <small>Registrado: {{ formatDate(historia.fechaRegistro) }}</small>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    </div>
+  }
+</div>
