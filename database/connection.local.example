@@ -1,0 +1,3 @@
+# Copia este archivo como "connection.local" y ajusta con tus credenciales reales de PostgreSQL.
+# Ejemplo:
+# Host=localhost;Port=5432;Database=nutriciondb;Username=postgres;Password=tu_password;Pooling=true;Trust Server Certificate=true

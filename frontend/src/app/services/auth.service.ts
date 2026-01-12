@@ -4,7 +4,7 @@ import { Observable, tap, BehaviorSubject } from 'rxjs';
 import { Router } from '@angular/router';
 
 export interface User {
-  id: number;
+  id: string;
   username: string;
   nombre: string;
   email: string;
@@ -36,6 +36,17 @@ export class AuthService {
 
   login(username: string, password: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, { username, password })
+      .pipe(
+        tap(response => {
+          if (response.success && response.token) {
+            this.setSession(response.token, response.user);
+          }
+        })
+      );
+  }
+
+  register(username: string, password: string, email?: string, nombre?: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/register`, { username, password, email, nombre })
       .pipe(
         tap(response => {
           if (response.success && response.token) {

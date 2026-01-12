@@ -1,0 +1,1 @@
+Host=localhost;Port=5432;Database=nutriciondb;Username=postgres;Password=030762;Pooling=true;Trust Server Certificate=true 

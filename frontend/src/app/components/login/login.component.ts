@@ -109,6 +109,95 @@ import { AuthService } from '../../services/auth.service';
           </button>
         </form>
 
+        <div class="register-section">
+          <div class="section-title">Crear cuenta</div>
+          <form [formGroup]="registerForm" (ngSubmit)="onRegister()" class="register-form">
+            @if (registerError()) {
+              <div class="error-alert">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>
+                </svg>
+                {{ registerError() }}
+              </div>
+            }
+
+            <div class="form-group">
+              <label for="register-username">Usuario</label>
+              <input
+                id="register-username"
+                type="text"
+                formControlName="username"
+                placeholder="Crea tu usuario"
+                [class.invalid]="registerForm.get('username')?.invalid && registerForm.get('username')?.touched"
+              />
+              @if (registerForm.get('username')?.invalid && registerForm.get('username')?.touched) {
+                <span class="error-text">El usuario es requerido</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="register-password">Contraseña</label>
+              <div class="password-input">
+                <input
+                  id="register-password"
+                  [type]="showRegisterPassword() ? 'text' : 'password'"
+                  formControlName="password"
+                  placeholder="Crea tu contraseña"
+                  [class.invalid]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
+                />
+                <button
+                  type="button"
+                  class="toggle-password"
+                  (click)="toggleRegisterPassword()"
+                  tabindex="-1"
+                >
+                  @if (showRegisterPassword()) {
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                      <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                  } @else {
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z"/>
+                      <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>
+                    </svg>
+                  }
+                </button>
+              </div>
+              @if (registerForm.get('password')?.invalid && registerForm.get('password')?.touched) {
+                <span class="error-text">La contraseña es requerida</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="register-email">Email (opcional)</label>
+              <input
+                id="register-email"
+                type="email"
+                formControlName="email"
+                placeholder="correo@ejemplo.com"
+                [class.invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
+              />
+              @if (registerForm.get('email')?.invalid && registerForm.get('email')?.touched) {
+                <span class="error-text">El email no es válido</span>
+              }
+            </div>
+
+            <button
+              type="submit"
+              class="btn-register"
+              [disabled]="registerForm.invalid || isRegistering()"
+            >
+              @if (isRegistering()) {
+                <span class="spinner"></span>
+                Creando cuenta...
+              } @else {
+                Registrarme
+              }
+            </button>
+          </form>
+        </div>
+
         <div class="login-footer">
           <p>© 2024 NutriWeb. Todos los derechos reservados.</p>
         </div>
@@ -171,6 +260,60 @@ import { AuthService } from '../../services/auth.service';
 
     .login-form {
       padding: 2rem;
+    }
+
+    .register-section {
+      border-top: 1px solid #e6e6e6;
+      padding: 1.5rem 2rem 2rem;
+      background: #fafbff;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #5a5a5a;
+      margin-bottom: 1rem;
+    }
+
+    .register-form {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .btn-register {
+      width: 100%;
+      padding: 0.95rem;
+      background: white;
+      color: #667eea;
+      border: 2px solid #667eea;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s, color 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-register:hover:not(:disabled) {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .btn-register:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-register .spinner {
+      border-color: rgba(102, 126, 234, 0.3);
+      border-top-color: #667eea;
     }
 
     .error-alert {
@@ -343,6 +486,10 @@ import { AuthService } from '../../services/auth.service';
         padding: 1.5rem;
       }
 
+      .register-section {
+        padding: 1.5rem;
+      }
+
       .login-footer {
         padding: 1rem 1.5rem;
       }
@@ -351,9 +498,13 @@ import { AuthService } from '../../services/auth.service';
 })
 export class LoginComponent {
   loginForm: FormGroup;
+  registerForm: FormGroup;
   isLoading = signal(false);
+  isRegistering = signal(false);
   errorMessage = signal('');
+  registerError = signal('');
   showPassword = signal(false);
+  showRegisterPassword = signal(false);
 
   constructor(
     private fb: FormBuilder,
@@ -365,35 +516,80 @@ export class LoginComponent {
       password: ['', Validators.required],
       rememberMe: [false]
     });
+    this.registerForm = this.fb.group({
+      username: ['', Validators.required],
+      password: ['', Validators.required],
+      email: ['', Validators.email]
+    });
   }
 
   onSubmit(): void {
-    if (this.loginForm.valid) {
-      this.isLoading.set(true);
-      this.errorMessage.set('');
-
-      const { username, password } = this.loginForm.value;
-
-      this.authService.login(username, password).subscribe({
-        next: (response) => {
-          this.isLoading.set(false);
-          if (response.success) {
-            this.router.navigate(['/dashboard']);
-          }
-        },
-        error: (error) => {
-          this.isLoading.set(false);
-          if (error.status === 401) {
-            this.errorMessage.set('Usuario o contraseña incorrectos');
-          } else {
-            this.errorMessage.set('Error al iniciar sesión. Por favor, intente nuevamente.');
-          }
-        }
-      });
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      return;
     }
+
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    const { username, password } = this.loginForm.value;
+
+    this.authService.login(username, password).subscribe({
+      next: (response) => {
+        this.isLoading.set(false);
+        if (response.success) {
+          this.router.navigate(['/dashboard']);
+        }
+      },
+      error: (error) => {
+        this.isLoading.set(false);
+        if (error.status === 401) {
+          this.errorMessage.set('Usuario o contrase?a incorrectos');
+        } else {
+          this.errorMessage.set('Error al iniciar sesi?n. Por favor, intente nuevamente.');
+        }
+      }
+    });
   }
 
   togglePassword(): void {
     this.showPassword.set(!this.showPassword());
+  }
+
+  onRegister(): void {
+    if (this.registerForm.invalid) {
+      this.registerForm.markAllAsTouched();
+      return;
+    }
+
+    this.isRegistering.set(true);
+    this.registerError.set('');
+
+    const { username, password, email } = this.registerForm.value;
+    const emailValue = typeof email === 'string' && email.trim().length > 0 ? email.trim() : undefined;
+
+    this.authService.register(username, password, emailValue).subscribe({
+      next: (response) => {
+        this.isRegistering.set(false);
+        if (response.success) {
+          this.registerForm.reset();
+          this.router.navigate(['/dashboard']);
+        } else {
+          this.registerError.set('No se pudo completar el registro.');
+        }
+      },
+      error: (error) => {
+        this.isRegistering.set(false);
+        if (error.status === 409) {
+          this.registerError.set('El usuario o email ya existe.');
+        } else {
+          this.registerError.set('Error al registrar. Intente nuevamente.');
+        }
+      }
+    });
+  }
+
+  toggleRegisterPassword(): void {
+    this.showRegisterPassword.set(!this.showRegisterPassword());
   }
 }
