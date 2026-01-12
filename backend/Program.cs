@@ -31,12 +31,15 @@ app.UseCors();
 // Sesiones en memoria (local)
 var activeSessions = new System.Collections.Concurrent.ConcurrentDictionary<string, PublicUser>();
 
-app.MapPost("/api/auth/login", async (LoginRequest request) =>
+app.MapPost("/api/auth/login", async (LoginRequest request, HttpContext context) =>
 {
     if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
     {
         return Results.Json(new { success = false, error = "Username y password requeridos" }, statusCode: StatusCodes.Status400BadRequest);
     }
+
+    var ipAddress = GetClientIp(context);
+    var userAgent = GetUserAgent(context);
 
     await using var connection = new NpgsqlConnection(connectionString);
     await connection.OpenAsync();
@@ -54,24 +57,7 @@ app.MapPost("/api/auth/login", async (LoginRequest request) =>
     if (!await reader.ReadAsync())
     {
         await reader.CloseAsync();
-        
-        // Registrar intento fallido
-        try
-        {
-            await using var logCmd = new NpgsqlCommand(
-                @"INSERT INTO logs_acceso (username, accion, ip_address, user_agent, exitoso, mensaje)
-                  VALUES (@username, 'login', @ip, @ua, false, 'Usuario no encontrado')",
-                connection);
-            logCmd.Parameters.AddWithValue("username", request.Username);
-            logCmd.Parameters.AddWithValue("ip", "127.0.0.1");
-            logCmd.Parameters.AddWithValue("ua", "Backend");
-            await logCmd.ExecuteNonQueryAsync();
-        }
-        catch (Exception logEx)
-        {
-            Console.WriteLine($"Error al registrar intento fallido: {logEx.Message}");
-        }
-        
+        await LogAccessAttemptAsync(connection, null, request.Username, "login", ipAddress, userAgent, false, "Usuario no encontrado");
         return Results.Json(new { success = false, error = "Credenciales inválidas" }, statusCode: StatusCodes.Status401Unauthorized);
     }
 
@@ -100,24 +86,7 @@ app.MapPost("/api/auth/login", async (LoginRequest request) =>
 
     if (!isValid)
     {
-        // Registrar intento fallido por contraseña incorrecta
-        try
-        {
-            await using var logCmd = new NpgsqlCommand(
-                @"INSERT INTO logs_acceso (usuario_id, username, accion, ip_address, user_agent, exitoso, mensaje)
-                  VALUES (@uid, @username, 'login', @ip, @ua, false, 'Contraseña incorrecta')",
-                connection);
-            logCmd.Parameters.AddWithValue("uid", user.Id);
-            logCmd.Parameters.AddWithValue("username", user.Username);
-            logCmd.Parameters.AddWithValue("ip", "127.0.0.1");
-            logCmd.Parameters.AddWithValue("ua", "Backend");
-            await logCmd.ExecuteNonQueryAsync();
-        }
-        catch (Exception logEx)
-        {
-            Console.WriteLine($"Error al registrar intento fallido: {logEx.Message}");
-        }
-        
+        await LogAccessAttemptAsync(connection, user.Id, user.Username, "login", ipAddress, userAgent, false, "Contraseña incorrecta");
         return Results.Json(new { success = false, error = "Credenciales inválidas" }, statusCode: StatusCodes.Status401Unauthorized);
     }
 
@@ -138,24 +107,7 @@ app.MapPost("/api/auth/login", async (LoginRequest request) =>
     accessCmd.Parameters.AddWithValue("id", user.Id);
     await accessCmd.ExecuteNonQueryAsync();
 
-    // Registrar acceso exitoso en logs_acceso
-    try
-    {
-        await using var logCmd = new NpgsqlCommand(
-            @"INSERT INTO logs_acceso (usuario_id, username, accion, ip_address, user_agent, exitoso, mensaje)
-              VALUES (@uid, @username, 'login', @ip, @ua, true, 'Login exitoso')",
-            connection);
-        logCmd.Parameters.AddWithValue("uid", user.Id);
-        logCmd.Parameters.AddWithValue("username", user.Username);
-        logCmd.Parameters.AddWithValue("ip", "127.0.0.1"); // Por ahora hardcoded, se puede mejorar
-        logCmd.Parameters.AddWithValue("ua", "Backend"); // Por ahora hardcoded
-        await logCmd.ExecuteNonQueryAsync();
-    }
-    catch (Exception logEx)
-    {
-        // No fallar el login si falla el logging
-        Console.WriteLine($"Error al registrar acceso: {logEx.Message}");
-    }
+    await LogAccessAttemptAsync(connection, user.Id, user.Username, "login", ipAddress, userAgent, true, "Login exitoso");
 
     var token = Guid.NewGuid().ToString("N");
     activeSessions[token] = user;
@@ -163,13 +115,15 @@ app.MapPost("/api/auth/login", async (LoginRequest request) =>
     return Results.Ok(new LoginResponse(true, token, user));
 });
 
-app.MapPost("/api/auth/register", async (RegisterRequest request) =>
+app.MapPost("/api/auth/register", async (RegisterRequest request, HttpContext context) =>
 {
     if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
     {
         return Results.Json(new { success = false, error = "Username y password requeridos" }, statusCode: StatusCodes.Status400BadRequest);
     }
 
+    var ipAddress = GetClientIp(context);
+    var userAgent = GetUserAgent(context);
     var email = string.IsNullOrWhiteSpace(request.Email)
         ? $"{request.Username}@nutriweb.local"
         : request.Email!.Trim();
@@ -196,44 +150,11 @@ app.MapPost("/api/auth/register", async (RegisterRequest request) =>
         cmd.Parameters.AddWithValue("rol", "nutricionista");
 
         await cmd.ExecuteNonQueryAsync();
-        
-        // Registrar creación de usuario en logs_acceso
-        try
-        {
-            await using var logCmd = new NpgsqlCommand(
-                @"INSERT INTO logs_acceso (usuario_id, username, accion, ip_address, user_agent, exitoso, mensaje)
-                  VALUES (@uid, @username, 'register', @ip, @ua, true, 'Usuario registrado exitosamente')",
-                connection);
-            logCmd.Parameters.AddWithValue("uid", userId);
-            logCmd.Parameters.AddWithValue("username", request.Username);
-            logCmd.Parameters.AddWithValue("ip", "127.0.0.1");
-            logCmd.Parameters.AddWithValue("ua", "Backend");
-            await logCmd.ExecuteNonQueryAsync();
-        }
-        catch (Exception logEx)
-        {
-            Console.WriteLine($"Error al registrar creación de usuario: {logEx.Message}");
-        }
+        await LogAccessAttemptAsync(connection, userId, request.Username, "register", ipAddress, userAgent, true, "Usuario registrado exitosamente");
     }
     catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
     {
-        // Registrar intento fallido
-        try
-        {
-            await using var logCmd = new NpgsqlCommand(
-                @"INSERT INTO logs_acceso (username, accion, ip_address, user_agent, exitoso, mensaje)
-                  VALUES (@username, 'register', @ip, @ua, false, 'Usuario o email ya existe')",
-                connection);
-            logCmd.Parameters.AddWithValue("username", request.Username);
-            logCmd.Parameters.AddWithValue("ip", "127.0.0.1");
-            logCmd.Parameters.AddWithValue("ua", "Backend");
-            await logCmd.ExecuteNonQueryAsync();
-        }
-        catch (Exception logEx)
-        {
-            Console.WriteLine($"Error al registrar intento fallido: {logEx.Message}");
-        }
-        
+        await LogAccessAttemptAsync(connection, null, request.Username, "register", ipAddress, userAgent, false, "Usuario o email ya existe");
         return Results.Conflict(new { success = false, error = "El usuario o email ya existe" });
     }
 
@@ -389,12 +310,50 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username);
     await cmd.ExecuteNonQueryAsync();
 }
 
+static async Task LogAccessAttemptAsync(NpgsqlConnection connection, Guid? userId, string username, string action, string ipAddress, string userAgent, bool success, string message)
+{
+    try
+    {
+        var sql = userId.HasValue
+            ? @"INSERT INTO logs_acceso (usuario_id, username, accion, ip_address, user_agent, exitoso, mensaje)
+                VALUES (@uid, @username, @action, @ip, @ua, @success, @msg)"
+            : @"INSERT INTO logs_acceso (username, accion, ip_address, user_agent, exitoso, mensaje)
+                VALUES (@username, @action, @ip, @ua, @success, @msg)";
+
+        await using var cmd = new NpgsqlCommand(sql, connection);
+        if (userId.HasValue)
+        {
+            cmd.Parameters.AddWithValue("uid", userId.Value);
+        }
+        cmd.Parameters.AddWithValue("username", username);
+        cmd.Parameters.AddWithValue("action", action);
+        cmd.Parameters.AddWithValue("ip", ipAddress);
+        cmd.Parameters.AddWithValue("ua", userAgent);
+        cmd.Parameters.AddWithValue("success", success);
+        cmd.Parameters.AddWithValue("msg", message);
+        await cmd.ExecuteNonQueryAsync();
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error al registrar acceso: {ex.Message}");
+    }
+}
+
+static string GetClientIp(HttpContext context)
+{
+    return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+}
+
+static string GetUserAgent(HttpContext context)
+{
+    return context.Request.Headers.UserAgent.ToString();
+}
+
 static string HashPassword(string password)
 {
     var salt = RandomNumberGenerator.GetBytes(16);
     const int iterations = 100_000;
-    using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256);
-    var hash = pbkdf2.GetBytes(32);
+    var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, 32);
     return $"PBKDF2${iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
 }
 
@@ -413,9 +372,7 @@ static bool VerifyPassword(string password, string storedHash)
 
     var salt = Convert.FromBase64String(parts[2]);
     var expected = Convert.FromBase64String(parts[3]);
-
-    using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256);
-    var actual = pbkdf2.GetBytes(expected.Length);
+    var actual = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, expected.Length);
 
     return CryptographicOperations.FixedTimeEquals(actual, expected);
 }

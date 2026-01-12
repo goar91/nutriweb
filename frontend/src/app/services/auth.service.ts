@@ -37,9 +37,15 @@ export class AuthService {
   login(username: string, password: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, { username, password })
       .pipe(
-        tap(response => {
-          if (response.success && response.token) {
-            this.setSession(response.token, response.user);
+        tap({
+          next: (response) => {
+            if (response.success && response.token) {
+              this.setSession(response.token, response.user);
+            }
+          },
+          error: (error) => {
+            console.error('Error en login:', error);
+            this.clearSession();
           }
         })
       );
@@ -48,9 +54,14 @@ export class AuthService {
   register(username: string, password: string, email?: string, nombre?: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/register`, { username, password, email, nombre })
       .pipe(
-        tap(response => {
-          if (response.success && response.token) {
-            this.setSession(response.token, response.user);
+        tap({
+          next: (response) => {
+            if (response.success && response.token) {
+              this.setSession(response.token, response.user);
+            }
+          },
+          error: (error) => {
+            console.error('Error en registro:', error);
           }
         })
       );
@@ -59,7 +70,9 @@ export class AuthService {
   logout(): void {
     const token = this.getToken();
     if (token) {
-      this.http.post(`${this.apiUrl}/logout`, {}).subscribe();
+      this.http.post(`${this.apiUrl}/logout`, {}).subscribe({
+        error: (error) => console.error('Error en logout:', error)
+      });
     }
     this.clearSession();
     this.router.navigate(['/login']);
