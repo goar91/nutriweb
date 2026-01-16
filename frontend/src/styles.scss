@@ -96,3 +96,25 @@ body {
   min-height: 100vh;
   background-color: #f4f6fb;
 }
+
+/* Estilos globales para impresión */
+@media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  body {
+    min-height: 0 !important;
+  }
+
+  * {
+    page-break-before: avoid !important;
+  }
+
+  *:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+}

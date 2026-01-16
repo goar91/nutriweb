@@ -214,6 +214,13 @@ import { AuthService } from '../../services/auth.service';
         gap: 0.25rem;
       }
     }
+
+    /* Ocultar navbar completamente en impresión */
+    @media print {
+      .navbar {
+        display: none !important;
+      }
+    }
   `]
 })
 export class NavbarComponent {
