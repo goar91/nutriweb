@@ -1,0 +1,75 @@
+### Test: Guardar Historia Clínica
+POST http://localhost:5000/api/nutrition/history
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "personalData": {
+    "numeroCedula": "1234567890",
+    "nombre": "Test Patient",
+    "edadCronologica": "25",
+    "sexo": "Masculino",
+    "lugarResidencia": "Test City",
+    "estadoCivil": "Soltero",
+    "telefono": "0123456789",
+    "ocupacion": "Test",
+    "email": "test@example.com",
+    "fechaConsulta": "2026-01-15"
+  },
+  "motivoConsulta": "Test motivo",
+  "diagnostico": "Test diagnostico",
+  "notasExtras": "Test notas",
+  "antecedentes": {
+    "apf": "",
+    "app": "",
+    "apq": "",
+    "ago": "",
+    "menarquia": "",
+    "p": "",
+    "g": "",
+    "c": "",
+    "a": "",
+    "alergias": ""
+  },
+  "habitos": {
+    "fuma": "",
+    "alcohol": "",
+    "cafe": "",
+    "hidratacion": "",
+    "gaseosas": "",
+    "actividadFisica": "",
+    "te": "",
+    "edulcorantes": "",
+    "alimentacion": ""
+  },
+  "signosVitales": {
+    "presionArterial": "",
+    "frecuenciaCardiaca": "",
+    "frecuenciaRespiratoria": "",
+    "temperatura": ""
+  },
+  "datosAntropometricos": {
+    "peso": "",
+    "talla": "",
+    "circunferenciaCintura": "",
+    "circunferenciaCadera": "",
+    "circunferenciaBrazo": "",
+    "pliegues": ""
+  },
+  "valoresBioquimicos": {
+    "glucosa": "",
+    "hemoglobina": "",
+    "colesterol": "",
+    "trigliceridos": "",
+    "otros": ""
+  },
+  "recordatorio24h": {
+    "desayuno": "",
+    "mediaManana": "",
+    "almuerzo": "",
+    "mediaTarde": "",
+    "cena": "",
+    "extras": ""
+  },
+  "frequency": []
+}

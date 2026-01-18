@@ -544,9 +544,9 @@ export class LoginComponent {
       error: (error) => {
         this.isLoading.set(false);
         if (error.status === 401) {
-          this.errorMessage.set('Usuario o contrase?a incorrectos');
+          this.errorMessage.set('Usuario o contraseña incorrectos');
         } else {
-          this.errorMessage.set('Error al iniciar sesi?n. Por favor, intente nuevamente.');
+          this.errorMessage.set('Error al iniciar sesión. Por favor, intente nuevamente.');
         }
       }
     });
