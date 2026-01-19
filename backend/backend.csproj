@@ -12,4 +12,8 @@
     <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="..\\database\\setup_complete_database.sql" LogicalName="NutriWeb.Database.setup_complete_database.sql" />
+  </ItemGroup>
+
 </Project>

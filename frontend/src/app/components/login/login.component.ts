@@ -473,13 +473,48 @@ import { AuthService } from '../../services/auth.service';
       font-size: 0.85rem;
     }
 
+    /* Responsive Design - Tablet */
+    @media (max-width: 768px) {
+      .login-container {
+        padding: 2rem 1rem;
+      }
+
+      .login-card {
+        border-radius: 16px;
+      }
+
+      .login-header h1 {
+        font-size: 1.75rem;
+      }
+
+      .login-header p {
+        font-size: 0.9375rem;
+      }
+    }
+
+    /* Responsive Design - Mobile */
     @media (max-width: 480px) {
+      .login-container {
+        padding: 0;
+        align-items: stretch;
+      }
+
       .login-card {
         border-radius: 0;
+        box-shadow: none;
+        min-height: 100vh;
       }
 
       .login-header {
         padding: 2rem 1.5rem 1.5rem;
+      }
+
+      .login-header h1 {
+        font-size: 1.625rem;
+      }
+
+      .login-header p {
+        font-size: 0.875rem;
       }
 
       .login-form {
@@ -492,6 +527,42 @@ import { AuthService } from '../../services/auth.service';
 
       .login-footer {
         padding: 1rem 1.5rem;
+      }
+
+      .form-group label {
+        font-size: 0.875rem;
+      }
+
+      .form-group input,
+      .password-input input {
+        font-size: 1rem; /* Prevenir zoom en iOS */
+        padding: 0.875rem 1rem;
+      }
+
+      .btn-login {
+        padding: 0.875rem;
+        font-size: 1rem;
+      }
+    }
+
+    /* Landscape mobile */
+    @media (max-width: 768px) and (orientation: landscape) {
+      .login-card {
+        min-height: auto;
+      }
+
+      .login-header {
+        padding: 1.5rem 1.5rem 1rem;
+      }
+
+      .logo {
+        width: 40px;
+        height: 40px;
+      }
+
+      .logo svg {
+        width: 40px;
+        height: 40px;
       }
     }
   `]

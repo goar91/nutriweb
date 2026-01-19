@@ -29,7 +29,7 @@ interface SemanaPlan {
   template: `
     <div class="planes-container">
       <div class="planes-header">
-        <h2>Plan de Alimentación - Dos Semanas</h2>
+        <h2>Plan de Alimentación - Cuatro Semanas</h2>
         <div class="header-actions">
           <div class="historia-selector">
             <label for="historiaSelect">Historia Clínica:</label>
@@ -89,12 +89,20 @@ interface SemanaPlan {
                         <strong>Fecha Fin:</strong> {{ plan.fecha_fin | date: 'dd/MM/yyyy' }}
                       }
                     </div>
-                    <button class="btn-load" (click)="cargarPlan(plan.id)" title="Cargar este plan">
-                      <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                      </svg>
-                      Cargar
-                    </button>
+                    <div class="plan-actions">
+                      <button class="btn-load" (click)="cargarPlan(plan.id)" title="Cargar este plan">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                        Cargar
+                      </button>
+                      <button class="btn-delete" (click)="eliminarPlan(plan.id)" title="Eliminar este plan">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        Eliminar
+                      </button>
+                    </div>
                   </div>
                   @if (plan.objetivo) {
                     <div class="plan-detail"><strong>Objetivo:</strong> {{ plan.objetivo }}</div>
@@ -123,18 +131,87 @@ interface SemanaPlan {
             (click)="cambiarSemana(2)">
             Semana 2
           </button>
+          <button 
+            class="tab-btn" 
+            [class.active]="semanaActual() === 3"
+            (click)="cambiarSemana(3)">
+            Semana 3
+          </button>
+          <button 
+            class="tab-btn" 
+            [class.active]="semanaActual() === 4"
+            (click)="cambiarSemana(4)">
+            Semana 4
+          </button>
         </div>
-        <button 
-          class="btn-print-semana btn-print-all" 
-          (click)="imprimirAmbasSemanas()"
-          [disabled]="cargando || !historiaSeleccionada">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd"/>
-            <path d="M6 14h8v2H6z"/>
-          </svg>
-          Imprimir 2 semanas
-        </button>
+        <div class="semanas-actions">
+          <button 
+            class="btn-print-semana btn-print-all" 
+            (click)="mostrarModalImpresion.set(true)"
+            [disabled]="cargando || !historiaSeleccionada">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd"/>
+              <path d="M6 14h8v2H6z"/>
+            </svg>
+            Imprimir Semanas
+          </button>
+          <button 
+            class="btn-delete"
+            (click)="eliminarPlanActual()"
+            [disabled]="!planActualId || cargando"
+            title="Eliminar plan actual">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            Eliminar Plan
+          </button>
+        </div>
       </div>
+
+      @if (mostrarModalImpresion()) {
+        <div class="modal-overlay" (click)="mostrarModalImpresion.set(false)">
+          <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3>Seleccionar Semanas para Imprimir</h3>
+              <button class="modal-close" (click)="mostrarModalImpresion.set(false)">
+                <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p class="modal-description">Selecciona las semanas que deseas incluir en la impresión:</p>
+              <div class="semanas-checkboxes">
+                <label class="checkbox-item">
+                  <input type="checkbox" [(ngModel)]="imprimirSemana1" />
+                  <span>Semana 1</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" [(ngModel)]="imprimirSemana2" />
+                  <span>Semana 2</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" [(ngModel)]="imprimirSemana3" />
+                  <span>Semana 3</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" [(ngModel)]="imprimirSemana4" />
+                  <span>Semana 4</span>
+                </label>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-secondary" (click)="mostrarModalImpresion.set(false)">Cancelar</button>
+              <button class="btn-primary" (click)="confirmarImpresion()" [disabled]="!tieneSemanaSeleccionada()">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd"/>
+                </svg>
+                Imprimir
+              </button>
+            </div>
+          </div>
+        </div>
+      }
 
       <div class="plan-grid">
         @for (dia of diasSemana; track dia.key) {
@@ -214,7 +291,7 @@ interface SemanaPlan {
 
       @if (imprimiendoAmbasSemanas()) {
         <div class="print-all-container">
-          @for (semana of semanas; track semana) {
+          @for (semana of semanasParaImprimir(); track semana) {
             @let plan = getPlanSemana(semana);
             <div class="print-week">
               <div class="print-week-header">
@@ -362,12 +439,19 @@ interface SemanaPlan {
       display: flex;
       gap: 2rem;
       margin-bottom: 2rem;
+      align-items: center;
     }
 
     .tab-group {
       display: flex;
       align-items: center;
       gap: 0.5rem;
+    }
+
+    .semanas-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
     }
 
     .tab-btn {
@@ -562,6 +646,19 @@ interface SemanaPlan {
       }
     }
 
+    /* Responsive Design - Tablets */
+    @media (max-width: 1024px) {
+      .planes-container {
+        padding: 1.5rem;
+      }
+
+      .plan-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+    }
+
+    /* Responsive Design - Mobile */
     @media (max-width: 768px) {
       .planes-container {
         padding: 1rem;
@@ -574,31 +671,114 @@ interface SemanaPlan {
       .header-actions {
         width: 100%;
         flex-direction: column;
+        gap: 0.75rem;
       }
 
       .historia-selector {
         width: 100%;
         flex-direction: column;
         align-items: flex-start;
+        gap: 0.5rem;
       }
 
       .select-historia {
         width: 100%;
       }
 
-      .btn-save, .btn-secondary {
+      .btn-save, .btn-secondary, .btn-view {
         width: 100%;
         justify-content: center;
+        padding: 0.75rem 1rem;
       }
 
       .plan-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .dia-card {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .comida-item textarea {
+        font-size: 0.875rem;
       }
 
       .mensaje-exito {
         bottom: 1rem;
         right: 1rem;
         left: 1rem;
+        font-size: 0.875rem;
+      }
+
+      .tab-group {
+        width: 100%;
+      }
+
+      .tab-btn {
+        flex: 1;
+        font-size: 0.875rem;
+      }
+
+      .semanas-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn-print-semana {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .semanas-actions .btn-delete {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    /* Responsive Design - Small Mobile */
+    @media (max-width: 480px) {
+      .planes-container {
+        padding: 0.75rem;
+      }
+
+      .planes-header h2 {
+        font-size: 1.5rem;
+      }
+
+      .dia-card {
+        border-radius: 8px;
+      }
+
+      .dia-header {
+        padding: 0.75rem;
+      }
+
+      .dia-header h3 {
+        font-size: 1rem;
+      }
+
+      .comidas-list {
+        padding: 1rem;
+      }
+
+      .comida-item {
+        margin-bottom: 0.75rem;
+      }
+
+      .comida-item label {
+        font-size: 0.8125rem;
+      }
+
+      .comida-item textarea {
+        font-size: 0.8125rem;
+        padding: 0.625rem;
+      }
+
+      .semanas-tabs {
+        flex-direction: column;
+        gap: 0.75rem;
       }
     }
 
@@ -666,6 +846,11 @@ interface SemanaPlan {
       color: #4b5563;
     }
 
+    .plan-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
     .btn-load {
       display: inline-flex;
       align-items: center;
@@ -683,6 +868,30 @@ interface SemanaPlan {
 
     .btn-load:hover {
       background: #059669;
+    }
+
+    .btn-delete {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-delete:hover {
+      background: #dc2626;
+    }
+
+    .btn-delete:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
     .btn-view {
@@ -711,6 +920,158 @@ interface SemanaPlan {
       opacity: 0.6;
     }
 
+    /* Modal de impresión */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 0;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #6b7280;
+      cursor: pointer;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      background: #f3f4f6;
+      color: #1f2937;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .modal-description {
+      margin: 0 0 1.25rem 0;
+      color: #6b7280;
+      font-size: 0.9375rem;
+    }
+
+    .semanas-checkboxes {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem 1rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .checkbox-item:hover {
+      border-color: #667eea;
+      background: #f9fafb;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: #667eea;
+    }
+
+    .checkbox-item span {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      padding: 1.5rem;
+      border-top: 1px solid #e5e7eb;
+      background: #f9fafb;
+      border-bottom-left-radius: 12px;
+      border-bottom-right-radius: 12px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #5a67d8;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-primary:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
     /* Estilos para impresión */
     @media print {
       /* Ocultar elementos de navegación y acciones */
@@ -718,7 +1079,8 @@ interface SemanaPlan {
       .planes-header,
       .semanas-tabs,
       .btn-print-semana,
-      .planes-guardados-section {
+      .planes-guardados-section,
+      .modal-overlay {
         display: none !important;
       }
 
@@ -806,7 +1168,13 @@ export class PlanesAlimentacionComponent implements OnInit {
   cargandoPlanes = false;
   planActualId: string | null = null;
   imprimiendoAmbasSemanas = signal(false);
-  semanas = [1, 2];
+  semanas = [1, 2, 3, 4];
+  mostrarModalImpresion = signal(false);
+  semanasParaImprimir = signal<number[]>([]);
+  imprimirSemana1 = true;
+  imprimirSemana2 = true;
+  imprimirSemana3 = true;
+  imprimirSemana4 = true;
   
   diasSemana = [
     { key: 'lunes' as const, nombre: 'Lunes' },
@@ -820,6 +1188,8 @@ export class PlanesAlimentacionComponent implements OnInit {
 
   semana1: SemanaPlan = this.crearSemanaVacia();
   semana2: SemanaPlan = this.crearSemanaVacia();
+  semana3: SemanaPlan = this.crearSemanaVacia();
+  semana4: SemanaPlan = this.crearSemanaVacia();
 
   constructor(private planesService: PlanesService, private http: HttpClient) {}
 
@@ -839,7 +1209,6 @@ export class PlanesAlimentacionComponent implements OnInit {
   }
 
   onHistoriaChange(): void {
-    console.log('Historia seleccionada:', this.historiaSeleccionada);
     // Ocultar planes guardados al cambiar de historia
     this.mostrarPlanesGuardados.set(false);
     this.planesGuardados.set([]);
@@ -856,6 +1225,8 @@ export class PlanesAlimentacionComponent implements OnInit {
         } else {
           this.semana1 = this.crearSemanaVacia();
           this.semana2 = this.crearSemanaVacia();
+          this.semana3 = this.crearSemanaVacia();
+          this.semana4 = this.crearSemanaVacia();
         }
       },
       error: (error) => {
@@ -865,11 +1236,23 @@ export class PlanesAlimentacionComponent implements OnInit {
   }
 
   getPlanActual(): SemanaPlan {
-    return this.semanaActual() === 1 ? this.semana1 : this.semana2;
+    switch(this.semanaActual()) {
+      case 1: return this.semana1;
+      case 2: return this.semana2;
+      case 3: return this.semana3;
+      case 4: return this.semana4;
+      default: return this.semana1;
+    }
   }
 
   getPlanSemana(semana: number): SemanaPlan {
-    return semana === 1 ? this.semana1 : this.semana2;
+    switch(semana) {
+      case 1: return this.semana1;
+      case 2: return this.semana2;
+      case 3: return this.semana3;
+      case 4: return this.semana4;
+      default: return this.semana1;
+    }
   }
 
   cambiarSemana(semana: number): void {
@@ -894,7 +1277,9 @@ export class PlanesAlimentacionComponent implements OnInit {
           HistoriaId: this.historiaSeleccionada,
           FechaInicio: new Date().toISOString().split('T')[0],
           Semana1: this.semana1,
-          Semana2: this.semana2
+          Semana2: this.semana2,
+          Semana3: this.semana3,
+          Semana4: this.semana4
         };
 
         if (planes && planes.length > 0) {
@@ -903,13 +1288,11 @@ export class PlanesAlimentacionComponent implements OnInit {
 
           this.planesService.actualizarPlan(planExistente.id, planCompleto as any).subscribe({
             next: (response) => {
-              console.log('Plan actualizado:', response);
               this.cargando = false;
               this.mensajeGuardado.set(true);
               setTimeout(() => this.mensajeGuardado.set(false), 3000);
             },
             error: (error) => {
-              console.error('Error actualizando plan:', error);
               this.cargando = false;
               alert('Error al actualizar el plan. Por favor intente nuevamente.');
             }
@@ -917,14 +1300,12 @@ export class PlanesAlimentacionComponent implements OnInit {
         } else {
           this.planesService.crearPlan(planCompleto as any).subscribe({
             next: (response) => {
-              console.log('Plan creado:', response);
               this.planActualId = response.planId;
               this.cargando = false;
               this.mensajeGuardado.set(true);
               setTimeout(() => this.mensajeGuardado.set(false), 3000);
             },
             error: (error) => {
-              console.error('Error creando plan:', error);
               this.cargando = false;
               alert('Error al guardar el plan. Por favor intente nuevamente.');
             }
@@ -932,7 +1313,6 @@ export class PlanesAlimentacionComponent implements OnInit {
         }
       },
       error: (error) => {
-        console.error('Error verificando planes existentes:', error);
         this.cargando = false;
         alert('Error al verificar planes existentes.');
       }
@@ -944,10 +1324,19 @@ export class PlanesAlimentacionComponent implements OnInit {
       return;
     }
 
-    if (this.semanaActual() === 1) {
-      this.semana1 = this.crearSemanaVacia();
-    } else {
-      this.semana2 = this.crearSemanaVacia();
+    switch(this.semanaActual()) {
+      case 1:
+        this.semana1 = this.crearSemanaVacia();
+        break;
+      case 2:
+        this.semana2 = this.crearSemanaVacia();
+        break;
+      case 3:
+        this.semana3 = this.crearSemanaVacia();
+        break;
+      case 4:
+        this.semana4 = this.crearSemanaVacia();
+        break;
     }
   }
 
@@ -970,23 +1359,17 @@ export class PlanesAlimentacionComponent implements OnInit {
     }
 
     this.cargandoPlanes = true;
-    console.log('[DEBUG] Cargando planes para historia:', this.historiaSeleccionada);
     
     this.planesService.getPlanesByHistoria(this.historiaSeleccionada).subscribe({
       next: (planes) => {
-        console.log('[DEBUG] Planes cargados exitosamente:', planes);
         this.planesGuardados.set(planes);
         this.cargandoPlanes = false;
         
         if (planes && planes.length === 1) {
-          console.log('[DEBUG] Solo hay un plan, cargando automaticamente');
           this.cargarPlan(planes[0].id);
         }
       },
       error: (error) => {
-        console.error('[ERROR] Error cargando planes:', error);
-        console.error('[ERROR] Status:', error.status);
-        console.error('[ERROR] Message:', error.message);
         this.cargandoPlanes = false;
         
         if (error.status === 401) {
@@ -1011,17 +1394,90 @@ export class PlanesAlimentacionComponent implements OnInit {
         if (plan.semana2) {
           this.semana2 = plan.semana2;
         }
+        if (plan.semana3) {
+          this.semana3 = plan.semana3;
+        }
+        if (plan.semana4) {
+          this.semana4 = plan.semana4;
+        }
         
         this.mostrarPlanesGuardados.set(false);
       },
       error: (error) => {
-        console.error('Error cargando plan:', error);
         alert('Error al cargar el plan.');
       }
     });
   }
 
-  imprimirAmbasSemanas(): void {
+  eliminarPlanActual(): void {
+    if (!this.planActualId) {
+      alert('No hay un plan cargado para eliminar.');
+      return;
+    }
+
+    this.eliminarPlan(this.planActualId);
+  }
+
+  eliminarPlan(planId: string): void {
+    if (!confirm('¿Estás seguro de que deseas eliminar este plan? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    this.planesService.eliminarPlan(planId).subscribe({
+      next: (response) => {
+        alert('Plan eliminado exitosamente');
+        
+        // Si el plan eliminado es el plan actual, limpiar todo
+        if (this.planActualId === planId) {
+          this.planActualId = null;
+          this.semana1 = this.crearSemanaVacia();
+          this.semana2 = this.crearSemanaVacia();
+          this.semana3 = this.crearSemanaVacia();
+          this.semana4 = this.crearSemanaVacia();
+        }
+        
+        // Recargar la lista de planes guardados
+        this.cargarPlanesGuardados();
+      },
+      error: (error) => {
+        alert('Error al eliminar el plan. Por favor intente nuevamente.');
+      }
+    });
+  }
+
+  tieneSemanaSeleccionada(): boolean {
+    return this.imprimirSemana1 || this.imprimirSemana2 || this.imprimirSemana3 || this.imprimirSemana4;
+  }
+
+  confirmarImpresion(): void {
+    const semanasSeleccionadas: number[] = [];
+    if (this.imprimirSemana1) semanasSeleccionadas.push(1);
+    if (this.imprimirSemana2) semanasSeleccionadas.push(2);
+    if (this.imprimirSemana3) semanasSeleccionadas.push(3);
+    if (this.imprimirSemana4) semanasSeleccionadas.push(4);
+
+    this.semanasParaImprimir.set(semanasSeleccionadas);
+    this.mostrarModalImpresion.set(false);
+    this.imprimirSemanasSeleccionadas();
+  }
+
+  imprimirSemanasSeleccionadas(): void {
+    this.imprimiendoAmbasSemanas.set(true);
+    document.body.classList.add('printing-plan');
+
+    // Dejar que Angular pinte las semanas seleccionadas y luego imprimir
+    setTimeout(() => {
+      window.print();
+
+      // Restaurar modo normal después de que el navegador procese la impresión
+      setTimeout(() => {
+        this.imprimiendoAmbasSemanas.set(false);
+        document.body.classList.remove('printing-plan');
+      }, 400);
+    }, 300);
+  }
+
+  imprimirTodasSemanas(): void {
     this.imprimiendoAmbasSemanas.set(true);
     document.body.classList.add('printing-plan');
 

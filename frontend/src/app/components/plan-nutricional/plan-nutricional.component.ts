@@ -422,7 +422,6 @@ export class PlanNutricionalComponent {
         }, 2000);
       },
       error: (error) => {
-        console.error('Error guardando plan:', error);
         this.mostrarMensaje('Error al guardar el plan', true);
       }
     });

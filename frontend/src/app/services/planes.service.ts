@@ -29,6 +29,8 @@ export interface PlanAlimentacion {
   observaciones?: string;
   semana1: SemanaPlan;
   semana2: SemanaPlan;
+  semana3?: SemanaPlan;
+  semana4?: SemanaPlan;
 }
 
 export interface PlanNutricional {

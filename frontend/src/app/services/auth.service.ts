@@ -43,8 +43,7 @@ export class AuthService {
               this.setSession(response.token, response.user);
             }
           },
-          error: (error) => {
-            console.error('Error en login:', error);
+          error: () => {
             this.clearSession();
           }
         })
@@ -59,9 +58,6 @@ export class AuthService {
             if (response.success && response.token) {
               this.setSession(response.token, response.user);
             }
-          },
-          error: (error) => {
-            console.error('Error en registro:', error);
           }
         })
       );
@@ -69,11 +65,24 @@ export class AuthService {
 
   logout(): void {
     const token = this.getToken();
+    const shutdown = this.shouldShutdownOnLogout();
+    const url = shutdown ? `${this.apiUrl}/logout?shutdown=1` : `${this.apiUrl}/logout`;
+
+    if (shutdown) {
+      this.clearSession();
+      this.sendLogoutRequest(url);
+      this.tryCloseWindow();
+      return;
+    }
+
     if (token) {
-      this.http.post(`${this.apiUrl}/logout`, {}).subscribe({
-        error: (error) => console.error('Error en logout:', error)
+      this.http.post(url, {}).subscribe({
+        error: () => {
+          console.error('Error en logout');
+        }
       });
     }
+
     this.clearSession();
     this.router.navigate(['/login']);
   }
@@ -123,5 +132,55 @@ export class AuthService {
 
   private hasToken(): boolean {
     return !!localStorage.getItem(this.tokenKey);
+  }
+
+  private shouldShutdownOnLogout(): boolean {
+    if (this.isLocalHost(window.location.hostname)) {
+      return true;
+    }
+
+    try {
+      const apiHost = new URL(this.apiUrl).hostname;
+      return this.isLocalHost(apiHost);
+    } catch {
+      return false;
+    }
+  }
+
+  private isLocalHost(hostname: string): boolean {
+    const normalized = hostname.toLowerCase();
+    return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1';
+  }
+
+  private sendLogoutRequest(url: string): void {
+    try {
+      if (navigator.sendBeacon) {
+        const queued = navigator.sendBeacon(url);
+        if (queued) {
+          return;
+        }
+      }
+    } catch {
+      // Fall back to fetch.
+    }
+
+    fetch(url, {
+      method: 'POST',
+      keepalive: true,
+      mode: 'no-cors'
+    }).catch(() => {
+      // Best-effort shutdown; ignore errors while closing.
+    });
+  }
+
+  private tryCloseWindow(): void {
+    window.open('', '_self');
+    window.close();
+
+    setTimeout(() => {
+      if (!document.hidden) {
+        window.location.replace('about:blank');
+      }
+    }, 250);
   }
 }

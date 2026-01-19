@@ -1,0 +1,53 @@
+# Archivos de licencia y claves (NO COMPARTIR)
+*.key
+license.key
+backend/license.key
+publish/dist/license.key
+
+# Generador de licencias (NO DISTRIBUIR)
+backend/GenerateLicense.cs
+backend/GenerateLicense.csproj
+
+# Clave maestra (CRÍTICO - NO COMPARTIR)
+# CAMBIAR SECRET_KEY en LicenseValidator.cs antes de distribución
+
+# Compilaciones
+publish/
+dist/
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Angular
+.angular/
+frontend/dist/
+frontend/.angular/
+
+# IDE
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Configuración local de base de datos
+database/connection.local
+appsettings.Development.json
+connection.txt
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

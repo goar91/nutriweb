@@ -1835,17 +1835,39 @@ interface ReporteData {
       border-bottom: none;
     }
 
+    /* Responsive Design - Tablets */
+    @media (max-width: 1024px) {
+      .dashboard-container {
+        padding: 1.5rem 1rem;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .action-cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Responsive Design - Mobile */
     @media (max-width: 768px) {
       .dashboard-header h1 {
         font-size: 2rem;
       }
 
+      .dashboard-header p {
+        font-size: 1rem;
+      }
+
       .stats-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
       }
 
       .action-cards {
         grid-template-columns: 1fr;
+        gap: 1rem;
       }
 
       .stat-card {
@@ -1859,6 +1881,7 @@ interface ReporteData {
 
       .section-container {
         padding: 1.5rem;
+        border-radius: 12px;
       }
 
       .reports-grid {
@@ -1887,6 +1910,56 @@ interface ReporteData {
       .detailed-report-btn {
         width: 100%;
         justify-content: center;
+      }
+    }
+
+    /* Responsive Design - Small Mobile */
+    @media (max-width: 480px) {
+      .dashboard-container {
+        padding: 1rem 0.5rem;
+      }
+
+      .dashboard-header h1 {
+        font-size: 1.75rem;
+      }
+
+      .stats-grid {
+        gap: 0.75rem;
+      }
+
+      .stat-card {
+        padding: 1rem;
+        gap: 1rem;
+      }
+
+      .stat-number {
+        font-size: 1.75rem;
+      }
+
+      .section-container {
+        padding: 1rem;
+        border-radius: 8px;
+      }
+
+      .section-header h2 {
+        font-size: 1.5rem;
+      }
+
+      .action-card {
+        padding: 1.5rem;
+      }
+
+      .table-container {
+        margin: 0 -0.5rem;
+      }
+
+      .patients-table {
+        font-size: 0.8125rem;
+      }
+
+      .patients-table th,
+      .patients-table td {
+        padding: 0.625rem 0.375rem;
       }
     }
 

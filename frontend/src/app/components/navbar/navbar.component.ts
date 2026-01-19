@@ -171,13 +171,31 @@ import { AuthService } from '../../services/auth.service';
       text-decoration: underline;
     }
 
-    @media (min-width: 640px) {
+    /* Responsive Design - Desktop */
+    @media (min-width: 769px) {
       .brand-name {
         display: inline;
       }
+
+      .mobile-toggle {
+        display: none;
+      }
     }
 
+    /* Responsive Design - Tablet */
+    @media (max-width: 768px) and (min-width: 481px) {
+      .brand-name {
+        display: inline;
+        font-size: 1.125rem;
+      }
+    }
+
+    /* Responsive Design - Mobile */
     @media (max-width: 768px) {
+      .navbar {
+        padding: 0.75rem 1rem;
+      }
+
       .mobile-toggle {
         display: block;
       }
@@ -194,6 +212,7 @@ import { AuthService } from '../../services/auth.service';
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         transform: translateY(-120%);
         transition: transform 0.3s ease;
+        z-index: 999;
       }
 
       .nav-menu.active {
@@ -203,15 +222,61 @@ import { AuthService } from '../../services/auth.service';
       .nav-link {
         padding: 1rem;
         justify-content: flex-start;
+        border-radius: 8px;
+      }
+
+      .nav-link:hover {
+        background: #f3f4f6;
       }
 
       .nav-user {
         border-radius: 12px;
         padding: 1rem;
+        background: #f9fafb;
       }
 
       .user-info {
         gap: 0.25rem;
+      }
+    }
+
+    /* Responsive Design - Small Mobile */
+    @media (max-width: 480px) {
+      .navbar {
+        padding: 0.625rem 0.75rem;
+      }
+
+      .brand-name {
+        display: none;
+      }
+
+      .nav-brand svg {
+        width: 28px;
+        height: 28px;
+      }
+
+      .nav-menu {
+        top: 52px;
+        padding: 0.75rem;
+      }
+
+      .nav-link {
+        padding: 0.875rem;
+        font-size: 0.9375rem;
+      }
+
+      .avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.875rem;
+      }
+
+      .user-info strong {
+        font-size: 0.875rem;
+      }
+
+      .logout-link {
+        font-size: 0.6875rem;
       }
     }
 

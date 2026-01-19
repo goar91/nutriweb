@@ -2,12 +2,35 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Diagnostics;
+using System.Net;
+using System.Reflection;
 using Microsoft.Extensions.FileProviders;
 using Npgsql;
 using NpgsqlTypes;
-
-// Registrar proveedores de codificación para Windows-1252 y otras codificaciones legacy
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+Console.WriteLine("═══════════════════════════════════════════════════════════");
+Console.WriteLine("  NUTRIWEB - Sistema de Nutrición");
+Console.WriteLine("═══════════════════════════════════════════════════════════");
+Console.WriteLine();
+
+
+
+var launchBrowser = !IsTruthy(Environment.GetEnvironmentVariable("NUTRIWEB_NO_BROWSER"));
+var browserUrlOverride = Environment.GetEnvironmentVariable("NUTRIWEB_BROWSER_URL");
+var skipDbBootstrap = IsTruthy(Environment.GetEnvironmentVariable("NUTRIWEB_SKIP_DB_BOOTSTRAP"));
+
+var securityFilePath = ResolveSecurityFilePath();
+if (!File.Exists(securityFilePath))
+{
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.Error.WriteLine($"[SECURITY] Archivo de seguridad no encontrado: {securityFilePath}");
+    Console.Error.WriteLine("[SECURITY] Ejecute GENERAR_SEGURIDAD.cmd para crearlo.");
+    Console.ResetColor();
+    Environment.Exit(1);
+}
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +41,25 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 var connectionString = ResolveConnectionString(builder.Configuration);
+
+if (!skipDbBootstrap)
+{
+    try
+    {
+        await EnsureDatabaseReadyAsync(connectionString);
+    }
+    catch (Exception ex)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.Error.WriteLine($"[DB] Error inicializando la base de datos: {ex.Message}");
+        Console.ResetColor();
+        Environment.Exit(1);
+    }
+}
+else
+{
+    Console.WriteLine("[DB] Bootstrap desactivado por NUTRIWEB_SKIP_DB_BOOTSTRAP");
+}
 
 // Resolver ruta de wwwroot en escenarios de single-file y build Angular con carpeta "browser":
 // 1) Preferir wwwroot/browser en el directorio actual, luego del ejecutable real, luego AppContext.BaseDirectory
@@ -41,7 +83,7 @@ var hasStaticFiles = !string.IsNullOrWhiteSpace(wwwRootPath) && Directory.Exists
 // Ajustar WebRootPath para que UseStaticFiles use la carpeta correcta
 if (hasStaticFiles)
 {
-    builder.Environment.WebRootPath = wwwRootPath;
+    builder.Environment.WebRootPath = wwwRootPath!;
 }
 
 builder.Services.AddCors(options =>
@@ -53,11 +95,21 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+var appLifetime = app.Lifetime;
 
 app.Urls.Clear();
 app.Urls.Add("http://localhost:5000");
 
 app.UseCors();
+
+var browserUrl = !string.IsNullOrWhiteSpace(browserUrlOverride)
+    ? browserUrlOverride!
+    : app.Urls.FirstOrDefault() ?? "http://localhost:5000";
+
+if (launchBrowser)
+{
+    appLifetime.ApplicationStarted.Register(() => TryLaunchBrowser(browserUrl));
+}
 
 // Agregar middleware de logging
 app.Use(async (context, next) =>
@@ -80,7 +132,7 @@ if (hasStaticFiles)
 {
     Console.WriteLine($"[STATIC] Sirviendo frontend desde {wwwRootPath}");
 
-    var fileProvider = new PhysicalFileProvider(wwwRootPath);
+    var fileProvider = new PhysicalFileProvider(wwwRootPath!);
 
     app.UseDefaultFiles(new DefaultFilesOptions
     {
@@ -93,7 +145,7 @@ if (hasStaticFiles)
     });
 
     // Responder explÐ‰citamente la raÐ†z con index.html para evitar 404
-    app.MapGet("/", () => Results.File(Path.Combine(wwwRootPath, "index.html"), "text/html"));
+    app.MapGet("/", () => Results.File(Path.Combine(wwwRootPath!, "index.html"), "text/html"));
 }
 else
 {
@@ -240,12 +292,21 @@ app.MapPost("/api/auth/register", async (RegisterRequest request, HttpContext co
 
 app.MapPost("/api/auth/logout", (HttpContext context) =>
 {
+    var shutdownRequested = RequestWantsShutdown(context);
+    var canShutdown = shutdownRequested && IsLocalRequest(context);
+
     if (TryGetToken(context, out var token) && token is not null)
     {
         activeSessions.TryRemove(token, out _);
     }
 
-    return Results.Ok(new { success = true });
+    if (canShutdown)
+    {
+        Console.WriteLine("[APP] Shutdown solicitado en logout");
+        ScheduleShutdown(appLifetime);
+    }
+
+    return Results.Ok(new { success = true, shutdown = canShutdown });
 });
 
 app.MapGet("/api/auth/verify", (HttpContext context) =>
@@ -266,7 +327,7 @@ app.MapGet("/api/nutrition/status", async () =>
     try
     {
         Console.WriteLine("[STATUS] Endpoint called");
-        Console.WriteLine($"[STATUS] Connection string: {connectionString}");
+        Console.WriteLine("[STATUS] Connection string resolved");
         await using var connection = new NpgsqlConnection(connectionString);
         Console.WriteLine("[STATUS] Connection object created");
         await connection.OpenAsync();
@@ -2258,6 +2319,30 @@ app.MapPost("/api/planes", async (HttpContext httpContext) =>
             }
         }
 
+        // Guardar semana 3
+        if (request.Semana3 != null)
+        {
+            foreach (var dia in request.Semana3)
+            {
+                if (diasMap.TryGetValue(dia.Key.ToLower(), out var diaSemana))
+                {
+                    await InsertarAlimentacionDia(connection, transaction, planId, 3, diaSemana, dia.Value);
+                }
+            }
+        }
+
+        // Guardar semana 4
+        if (request.Semana4 != null)
+        {
+            foreach (var dia in request.Semana4)
+            {
+                if (diasMap.TryGetValue(dia.Key.ToLower(), out var diaSemana))
+                {
+                    await InsertarAlimentacionDia(connection, transaction, planId, 4, diaSemana, dia.Value);
+                }
+            }
+        }
+
         await transaction.CommitAsync();
         return Results.Ok(new { success = true, planId = planId.ToString(), message = "Plan guardado exitosamente" });
     }
@@ -2342,6 +2427,30 @@ app.MapPut("/api/planes/{planId}", async (HttpContext httpContext, string planId
                 if (diasMap.TryGetValue(dia.Key.ToLower(), out var diaSemana))
                 {
                     await InsertarAlimentacionDia(connection, transaction, planGuid, 2, diaSemana, dia.Value);
+                }
+            }
+        }
+
+        // Guardar semana 3
+        if (request.Semana3 != null)
+        {
+            foreach (var dia in request.Semana3)
+            {
+                if (diasMap.TryGetValue(dia.Key.ToLower(), out var diaSemana))
+                {
+                    await InsertarAlimentacionDia(connection, transaction, planGuid, 3, diaSemana, dia.Value);
+                }
+            }
+        }
+
+        // Guardar semana 4
+        if (request.Semana4 != null)
+        {
+            foreach (var dia in request.Semana4)
+            {
+                if (diasMap.TryGetValue(dia.Key.ToLower(), out var diaSemana))
+                {
+                    await InsertarAlimentacionDia(connection, transaction, planGuid, 4, diaSemana, dia.Value);
                 }
             }
         }
@@ -2440,6 +2549,8 @@ app.MapGet("/api/planes/{planId}", async (HttpContext httpContext, string planId
 
     var semana1 = new Dictionary<string, object>(semanaVacia);
     var semana2 = new Dictionary<string, object>(semanaVacia);
+    var semana3 = new Dictionary<string, object>(semanaVacia);
+    var semana4 = new Dictionary<string, object>(semanaVacia);
 
     // Llenar semana1
     if (alimentacionRaw.ContainsKey(1))
@@ -2465,6 +2576,30 @@ app.MapGet("/api/planes/{planId}", async (HttpContext httpContext, string planId
         }
     }
 
+    // Llenar semana3
+    if (alimentacionRaw.ContainsKey(3))
+    {
+        foreach (var dia in alimentacionRaw[3])
+        {
+            if (diasMap.TryGetValue(dia.Key, out var nombreDia))
+            {
+                semana3[nombreDia] = dia.Value;
+            }
+        }
+    }
+
+    // Llenar semana4
+    if (alimentacionRaw.ContainsKey(4))
+    {
+        foreach (var dia in alimentacionRaw[4])
+        {
+            if (diasMap.TryGetValue(dia.Key, out var nombreDia))
+            {
+                semana4[nombreDia] = dia.Value;
+            }
+        }
+    }
+
     return Results.Ok(new 
     { 
         id = planInfo.id,
@@ -2474,7 +2609,9 @@ app.MapGet("/api/planes/{planId}", async (HttpContext httpContext, string planId
         objetivo = planInfo.objetivo,
         observaciones = planInfo.observaciones,
         semana1, 
-        semana2 
+        semana2,
+        semana3,
+        semana4
     });
 });
 
@@ -2514,6 +2651,61 @@ app.MapGet("/api/planes/historia/{historiaId}", async (HttpContext httpContext, 
     }
 
     return Results.Ok(planes);
+});
+
+// DELETE - Eliminar plan de alimentación
+app.MapDelete("/api/planes/{planId}", async (HttpContext httpContext, string planId) =>
+{
+    if (!TryGetToken(httpContext, out var token) || token is null || !IsTokenValid(token, activeSessions, out var user))
+    {
+        return Results.Unauthorized();
+    }
+
+    await using var connection = new NpgsqlConnection(connectionString);
+    await connection.OpenAsync();
+    await using var transaction = await connection.BeginTransactionAsync();
+
+    try
+    {
+        var planGuid = Guid.Parse(planId);
+
+        // Verificar que el plan existe
+        await using var cmdCheck = new NpgsqlCommand(
+            "SELECT COUNT(*) FROM planes_nutricionales WHERE id = @id", 
+            connection, transaction);
+        cmdCheck.Parameters.AddWithValue("id", planGuid);
+        
+        var exists = Convert.ToInt32(await cmdCheck.ExecuteScalarAsync()) > 0;
+        if (!exists)
+        {
+            await transaction.RollbackAsync();
+            return Results.NotFound(new { error = "Plan no encontrado" });
+        }
+
+        // Eliminar alimentación semanal (se eliminará automáticamente por ON DELETE CASCADE)
+        // Pero lo hacemos explícito para mayor claridad
+        await using var cmdDeleteAlim = new NpgsqlCommand(
+            "DELETE FROM alimentacion_semanal WHERE plan_id = @planId", 
+            connection, transaction);
+        cmdDeleteAlim.Parameters.AddWithValue("planId", planGuid);
+        await cmdDeleteAlim.ExecuteNonQueryAsync();
+
+        // Eliminar el plan
+        await using var cmdDeletePlan = new NpgsqlCommand(
+            "DELETE FROM planes_nutricionales WHERE id = @id", 
+            connection, transaction);
+        cmdDeletePlan.Parameters.AddWithValue("id", planGuid);
+        await cmdDeletePlan.ExecuteNonQueryAsync();
+
+        await transaction.CommitAsync();
+        return Results.Ok(new { success = true, message = "Plan eliminado exitosamente" });
+    }
+    catch (Exception ex)
+    {
+        await transaction.RollbackAsync();
+        Console.Error.WriteLine($"[ERROR] Error eliminando plan: {ex.Message}");
+        return Results.Json(new { error = "Error al eliminar el plan", details = ex.Message }, statusCode: 500);
+    }
 });
 
 if (hasStaticFiles)
@@ -2597,6 +2789,23 @@ static int? ParseIntOrNull(string? value)
     return null;
 }
 
+static string ResolveSecurityFilePath()
+{
+    var fromEnv = Environment.GetEnvironmentVariable("NUTRIWEB_SECURITY_FILE");
+    if (!string.IsNullOrWhiteSpace(fromEnv))
+    {
+        return fromEnv;
+    }
+
+    var baseDir = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+    if (string.IsNullOrWhiteSpace(baseDir))
+    {
+        baseDir = AppContext.BaseDirectory;
+    }
+
+    return Path.Combine(baseDir, "NutriWeb", "security.key");
+}
+
 static string ResolveConnectionString(IConfiguration configuration)
 {
     var fromEnv = Environment.GetEnvironmentVariable("NUTRITION_DB");
@@ -2607,15 +2816,28 @@ static string ResolveConnectionString(IConfiguration configuration)
     }
 
     var current = Directory.GetCurrentDirectory();
-    var connectionFile = Path.GetFullPath(Path.Combine(current, "..", "database", "connection.local"));
-    Console.WriteLine($"[DB] Looking for connection file at: {connectionFile}");
-    if (File.Exists(connectionFile))
+    var localConnectionFile = Path.Combine(current, "database", "connection.local");
+    Console.WriteLine($"[DB] Looking for connection file at: {localConnectionFile}");
+    if (File.Exists(localConnectionFile))
     {
-        var text = File.ReadAllText(connectionFile).Trim();
+        var text = File.ReadAllText(localConnectionFile).Trim();
         if (!string.IsNullOrWhiteSpace(text))
         {
-            Console.WriteLine($"[DB] Using connection from file: {connectionFile}");
-            Console.WriteLine($"[DB] Connection string: {text}");
+            Console.WriteLine($"[DB] Using connection from file: {localConnectionFile}");
+            Console.WriteLine("[DB] Connection string loaded from file");
+            return text;
+        }
+    }
+
+    var parentConnectionFile = Path.GetFullPath(Path.Combine(current, "..", "database", "connection.local"));
+    Console.WriteLine($"[DB] Looking for connection file at: {parentConnectionFile}");
+    if (File.Exists(parentConnectionFile))
+    {
+        var text = File.ReadAllText(parentConnectionFile).Trim();
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            Console.WriteLine($"[DB] Using connection from file: {parentConnectionFile}");
+            Console.WriteLine("[DB] Connection string loaded from file");
             return text;
         }
     }
@@ -2654,6 +2876,168 @@ static string ResolveConnectionString(IConfiguration configuration)
     }
 
     throw new InvalidOperationException("No se encontrÃ³ la cadena de conexiÃ³n. Defina NUTRITION_DB o cree database/connection.local con la cadena completa.");
+}
+
+static bool IsTruthy(string? value)
+{
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        return false;
+    }
+
+    return value.Equals("1", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("true", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("yes", StringComparison.OrdinalIgnoreCase)
+        || value.Equals("y", StringComparison.OrdinalIgnoreCase);
+}
+
+static bool RequestWantsShutdown(HttpContext context)
+{
+    if (!context.Request.Query.TryGetValue("shutdown", out var value))
+    {
+        return false;
+    }
+
+    return IsTruthy(value.ToString());
+}
+
+static bool IsLocalRequest(HttpContext context)
+{
+    var address = context.Connection.RemoteIpAddress;
+    return address != null && IPAddress.IsLoopback(address);
+}
+
+static void ScheduleShutdown(Microsoft.Extensions.Hosting.IHostApplicationLifetime lifetime)
+{
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(250);
+        lifetime.StopApplication();
+    });
+}
+
+static void TryLaunchBrowser(string url)
+{
+    try
+    {
+        Console.WriteLine($"[BROWSER] Abriendo {url}");
+        var psi = new ProcessStartInfo
+        {
+            FileName = url,
+            UseShellExecute = true
+        };
+        Process.Start(psi);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"[BROWSER] No se pudo abrir el navegador: {ex.Message}");
+    }
+}
+
+static async Task EnsureDatabaseReadyAsync(string connectionString)
+{
+    var builder = new NpgsqlConnectionStringBuilder(connectionString);
+    var databaseName = string.IsNullOrWhiteSpace(builder.Database) ? "nutriciondb" : builder.Database;
+
+    var adminBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+    {
+        Database = "postgres"
+    };
+
+    await using (var adminConnection = new NpgsqlConnection(adminBuilder.ConnectionString))
+    {
+        await adminConnection.OpenAsync();
+        if (!await DatabaseExistsAsync(adminConnection, databaseName))
+        {
+            Console.WriteLine($"[DB] Creando base de datos: {databaseName}");
+            var safeName = databaseName.Replace("\"", "\"\"");
+            await using var cmd = new NpgsqlCommand($"CREATE DATABASE \"{safeName}\"", adminConnection);
+            await cmd.ExecuteNonQueryAsync();
+        }
+    }
+
+    await using var connection = new NpgsqlConnection(connectionString);
+    await connection.OpenAsync();
+    await EnsurePgCryptoAsync(connection);
+
+    if (!await DoesTableExistAsync(connection, "pacientes"))
+    {
+        Console.WriteLine("[DB] Instalando esquema completo...");
+        var setupSql = LoadDatabaseSetupSql();
+        await using var cmd = new NpgsqlCommand(setupSql, connection);
+        await cmd.ExecuteNonQueryAsync();
+        Console.WriteLine("[DB] Esquema instalado");
+    }
+    else
+    {
+        Console.WriteLine("[DB] Esquema ya presente");
+    }
+}
+
+static async Task<bool> DatabaseExistsAsync(NpgsqlConnection connection, string databaseName)
+{
+    await using var cmd = new NpgsqlCommand(
+        "SELECT 1 FROM pg_database WHERE datname = @db",
+        connection);
+    cmd.Parameters.AddWithValue("db", databaseName);
+    var result = await cmd.ExecuteScalarAsync();
+    return result is not null;
+}
+
+static async Task<bool> DoesTableExistAsync(NpgsqlConnection connection, string tableName)
+{
+    await using var cmd = new NpgsqlCommand(
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = @name",
+        connection);
+    cmd.Parameters.AddWithValue("name", tableName);
+    var result = await cmd.ExecuteScalarAsync();
+    return result is not null;
+}
+
+static async Task EnsurePgCryptoAsync(NpgsqlConnection connection)
+{
+    await using var cmd = new NpgsqlCommand("CREATE EXTENSION IF NOT EXISTS pgcrypto", connection);
+    await cmd.ExecuteNonQueryAsync();
+}
+
+static string LoadDatabaseSetupSql()
+{
+    var candidates = new List<string>
+    {
+        Path.Combine(AppContext.BaseDirectory, "database", "setup_complete_database.sql"),
+        Path.Combine(AppContext.BaseDirectory, "setup_complete_database.sql"),
+        Path.Combine(Directory.GetCurrentDirectory(), "database", "setup_complete_database.sql"),
+        Path.Combine(Directory.GetCurrentDirectory(), "setup_complete_database.sql")
+    };
+
+    var exeDir = Path.GetDirectoryName(Environment.ProcessPath ?? string.Empty);
+    if (!string.IsNullOrWhiteSpace(exeDir))
+    {
+        candidates.Add(Path.Combine(exeDir, "database", "setup_complete_database.sql"));
+        candidates.Add(Path.Combine(exeDir, "setup_complete_database.sql"));
+    }
+
+    var encoding = Encoding.GetEncoding(1252);
+    foreach (var path in candidates)
+    {
+        if (File.Exists(path))
+        {
+            Console.WriteLine($"[DB] Usando script: {path}");
+            return File.ReadAllText(path, encoding);
+        }
+    }
+
+    const string resourceName = "NutriWeb.Database.setup_complete_database.sql";
+    var assembly = Assembly.GetExecutingAssembly();
+    using var stream = assembly.GetManifestResourceStream(resourceName);
+    if (stream == null)
+    {
+        throw new InvalidOperationException("No se encontro setup_complete_database.sql para inicializar la base de datos.");
+    }
+
+    Console.WriteLine($"[DB] Usando script embebido: {resourceName}");
+    using var reader = new StreamReader(stream, encoding);
+    return reader.ReadToEnd();
 }
 
 static bool TryGetToken(HttpContext context, out string? token)
@@ -3485,6 +3869,8 @@ public class GuardarPlanAlimentacionRequest
     public string? Observaciones { get; set; }
     public Dictionary<string, Dictionary<string, object>>? Semana1 { get; set; }
     public Dictionary<string, Dictionary<string, object>>? Semana2 { get; set; }
+    public Dictionary<string, Dictionary<string, object>>? Semana3 { get; set; }
+    public Dictionary<string, Dictionary<string, object>>? Semana4 { get; set; }
 }
 
 
